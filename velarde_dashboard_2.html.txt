@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velarde — SC1 Cost Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1A1A1A;--ink2:#4A4A4A;--ink3:#8A8A8A;
+  --paper:#F6F3EE;--white:#FFFFFF;--rule:#E2DDD5;
+  --mat:#B84D1A;--mat-lt:#FAE8DF;
+  --lab:#1D5FA0;--lab-lt:#DDE9F6;
+  --green:#1A7A3A;--green-lt:#DFF2E6;
+  --amber:#8A5A00;--amber-lt:#FFF3D6;
+  --danger:#C0392B;
+}
+html{font-size:14px}
+body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;line-height:1.5}
+
+.topbar{background:var(--ink);padding:0 40px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:20px}
+.topbar-logo{font-family:'JetBrains Mono',monospace;font-size:11px;color:#666;letter-spacing:.12em;text-transform:uppercase}
+.topbar-div{width:1px;height:20px;background:#333}
+.topbar-title{font-size:14px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.topbar-tag{font-size:11px;font-weight:500;color:var(--mat);background:rgba(184,77,26,.15);padding:3px 10px;border-radius:3px;letter-spacing:.04em}
+.nav-tabs{display:flex;gap:4px;background:#2A2A2A;border-radius:6px;padding:3px}
+.nav-btn{font-family:'Inter',sans-serif;font-size:11px;font-weight:500;color:#888;background:none;border:none;cursor:pointer;padding:5px 12px;border-radius:4px;transition:all .15s;letter-spacing:.03em;white-space:nowrap}
+.nav-btn.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+.wrap{max-width:1200px;margin:0 auto;padding:36px 24px 80px}
+.page{display:none}.page.active{display:block}
+
+.kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:28px}
+.kpi{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:20px 22px}
+.kpi.grand{border-left:3px solid var(--mat)}
+.kpi-eye{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:6px}
+.kpi-num{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:500;letter-spacing:-.02em;color:var(--ink);line-height:1}
+.kpi.grand .kpi-num{color:var(--mat);font-size:32px}
+.kpi-sub{font-size:11px;color:var(--ink3);margin-top:5px}
+.kpi-split{display:flex;gap:8px;margin-top:10px}
+.pill{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
+.pill.mat{background:var(--mat-lt);color:var(--mat)}
+.pill.lab{background:var(--lab-lt);color:var(--lab)}
+
+.sec-label{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sec-label h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3)}
+.legend{display:flex;gap:16px;margin-left:auto}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+
+.chart-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:24px 28px;margin-bottom:24px}
+.chart-row{display:grid;grid-template-columns:130px 1fr 110px;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.chart-row:last-child{border-bottom:none}
+.chart-fl{font-size:12px;font-weight:600;color:var(--ink)}.chart-fs{font-size:10px;color:var(--ink3);margin-top:1px}
+.bars{display:flex;flex-direction:column;gap:5px}
+.bar-track{height:18px;background:#F0ECE6;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.9);font-weight:500;white-space:nowrap;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.bar-fill.mat{background:var(--mat)}.bar-fill.lab{background:var(--lab)}
+.chart-tot{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--ink);text-align:right}
+.chart-tot-s{font-size:10px;color:var(--ink3);text-align:right;margin-top:2px}
+
+.floors-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.floor-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden;transition:box-shadow .15s}
+.floor-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.07)}
+.fc-top{padding:18px 22px 14px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:flex-start}
+.fc-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);letter-spacing:.1em;margin-bottom:4px}
+.fc-name{font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
+.fc-tot-box{text-align:right}
+.fc-tot-lbl{font-size:10px;color:var(--ink3);margin-bottom:2px}
+.fc-tot-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:var(--mat)}
+.fc-mid{padding:14px 22px 4px}
+.split-bar{height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:12px;background:var(--rule)}
+.sb-mat{background:var(--mat)}.sb-lab{background:var(--lab)}
+.two-row{display:flex;flex-direction:column;gap:7px}
+.cl{display:flex;align-items:center;justify-content:space-between}
+.cl-left{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2)}
+.cl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.cl-right{display:flex;align-items:center;gap:8px}
+.cl-amt{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink)}
+.cl-pct{font-size:11px;color:var(--ink3)}
+.expand-btn{width:100%;padding:11px;background:none;border:none;border-top:1px solid var(--rule);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;color:var(--lab);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:background .12s}
+.expand-btn:hover{background:#F0ECE6}
+.expand-icon{transition:transform .2s;font-size:14px;line-height:1;display:inline-block}
+.dp{display:none;border-top:1px solid var(--rule)}.dp.open{display:block}
+.dtabs{display:flex;border-bottom:1px solid var(--rule)}
+.dtab{flex:1;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;border:none;background:none;font-family:'Inter',sans-serif;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s}
+.dtab.active.mat{color:var(--mat);border-bottom-color:var(--mat)}
+.dtab.active.lab{color:var(--lab);border-bottom-color:var(--lab)}
+.dcontent{padding:0 22px 16px}
+.dtable{width:100%;border-collapse:collapse;margin-top:12px}
+.dtable th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--rule)}
+.dtable th.r{text-align:right}
+.dtable td{padding:9px 0;font-size:12px;color:var(--ink2);border-bottom:1px solid #F5F2EE;vertical-align:top}
+.dtable td.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;padding-left:16px}
+.dtable tr:last-child td{border-bottom:none}
+.dtable .sub-row td{font-weight:600;font-size:12px;background:#F6F3EE;border-radius:4px;padding:8px 10px;border-bottom:none;color:var(--ink)}
+.dtable .sub-row td.r{color:var(--mat)}
+.tag{display:inline-block;font-size:9px;font-weight:600;padding:1px 5px;border-radius:2px;margin-left:5px;vertical-align:middle;letter-spacing:.04em;text-transform:uppercase}
+.tag-rm{background:#FEF0E6;color:#A03A00}.tag-st{background:#E6EFF8;color:#1A4F80}.tag-fw{background:#EEF0E6;color:#4A5A30}
+
+.floor-pills{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.fpill{font-size:12px;font-weight:500;padding:7px 18px;border-radius:6px;border:1px solid var(--rule);background:var(--white);cursor:pointer;color:var(--ink2);transition:all .12s;font-family:'Inter',sans-serif}
+.fpill.active{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.fdc{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.fdc-hdr{padding:20px 28px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;background:#FAFAF8}
+.fdc-name{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.fdc-tot{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--mat)}
+.fdc-body{display:grid;grid-template-columns:1fr 1fr}
+.fdc-col{padding:24px 28px}
+.fdc-col:first-child{border-right:1px solid var(--rule)}
+.fdc-col-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.fdc-ct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:3px}
+.fdc-ct.mat{background:var(--mat-lt);color:var(--mat)}.fdc-ct.lab{background:var(--lab-lt);color:var(--lab)}
+.fdc-sub{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--ink3)}
+.ftable{width:100%;border-collapse:collapse}
+.ftable th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--rule)}
+.ftable th.r{text-align:right}
+.ftable td{padding:9px 0;font-size:12px;color:var(--ink2);border-bottom:1px dashed #EDE9E3;vertical-align:top}
+.ftable tr:last-child td{border-bottom:none}
+.ftable td.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink);padding-left:16px;white-space:nowrap}
+.fdc-foot{border-top:1px solid var(--rule);padding:14px 28px;display:flex;justify-content:flex-end;align-items:center;gap:16px;background:#FAFAF8}
+
+/* MATERIAL BREAKDOWN */
+.mb-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.mb-toolbar h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3)}
+.fsel{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:6px 12px;border-radius:6px;border:1px solid var(--rule);background:var(--white);color:var(--ink);cursor:pointer;outline:none}
+.fsel:focus{border-color:var(--lab)}
+.spacer{flex:1}
+.btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:7px 16px;border-radius:6px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .12s;white-space:nowrap}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.88}
+.btn-outline{background:var(--white);color:var(--ink2);border:1px solid var(--rule)}.btn-outline:hover{background:#F0ECE6}
+.btn-sm{padding:5px 12px;font-size:11px}
+
+.milestone-list{display:flex;flex-direction:column;gap:10px}
+.milestone-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.ms-hdr{display:flex;align-items:stretch;cursor:pointer;transition:background .12s;user-select:none}
+.ms-hdr:hover{background:#FAFAF8}
+.ms-floor-badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--white);padding:0 12px;letter-spacing:.06em;display:flex;align-items:center;justify-content:center;min-width:52px;flex-shrink:0;writing-mode:horizontal-tb}
+.ms-title-area{flex:1;padding:13px 14px}
+.ms-title{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.3}
+.ms-subtitle{font-size:11px;color:var(--ink3);margin-top:3px}
+.ms-right{display:flex;align-items:center;gap:14px;padding:0 14px 0 0;flex-shrink:0}
+.ms-tot-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--mat);white-space:nowrap}
+.ms-count{font-size:10px;color:var(--ink3);background:#F0ECE6;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ms-chev{font-size:11px;color:var(--ink3);transition:transform .2s;width:16px;text-align:center}
+.ms-chev.open{transform:rotate(180deg)}
+
+.ms-body{display:none;border-top:1px solid var(--rule)}
+.ms-body.open{display:block}
+
+.it-table-wrap{overflow-x:auto}
+.it-table{width:100%;border-collapse:collapse;min-width:620px}
+.it-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:10px 14px;text-align:left;border-bottom:1px solid var(--rule);background:#FAFAF8;white-space:nowrap}
+.it-table th.r{text-align:right}
+.it-table td{padding:8px 14px;font-size:12px;color:var(--ink2);border-bottom:1px solid #F5F2EE;vertical-align:middle}
+.it-table tbody tr:last-child td{border-bottom:none}
+.it-table tbody tr:hover td{background:#FDFCFB}
+.it-table td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink);text-align:right}
+.it-table td.tot-cell{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--mat);text-align:right}
+.it-table .subtot-row td{background:#FEF8F5;font-weight:700}
+.it-table .subtot-row td.tot-cell{font-size:13px;color:var(--mat)}
+.it-table .subtot-row td:not(.tot-cell){color:var(--ink3);font-weight:500;font-size:11px}
+
+.ei{font-family:'Inter',sans-serif;font-size:12px;border:1px solid transparent;border-radius:4px;padding:3px 7px;background:transparent;color:var(--ink);width:100%;outline:none;transition:all .12s}
+.ei:hover{border-color:var(--rule);background:var(--white)}
+.ei:focus{border-color:var(--lab);background:var(--white);box-shadow:0 0 0 2px rgba(29,95,160,.08)}
+.ei.r{text-align:right}
+.ei.wide{min-width:160px}
+.unit-sel{font-family:'Inter',sans-serif;font-size:11px;border:1px solid transparent;border-radius:4px;padding:3px 4px;background:transparent;color:var(--ink2);outline:none;cursor:pointer;transition:all .12s}
+.unit-sel:hover{border-color:var(--rule);background:var(--white)}
+.unit-sel:focus{border-color:var(--lab);background:var(--white)}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:13px;color:var(--ink3);padding:3px 6px;border-radius:4px;transition:all .12s;line-height:1}
+.btn-icon:hover{background:#FDECEA;color:var(--danger)}
+
+.ms-footer{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--rule);background:#FAFAF8}
+.ms-add-btn{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;color:var(--lab);background:none;border:1px solid var(--lab-lt);border-radius:5px;cursor:pointer;padding:5px 12px;display:flex;align-items:center;gap:5px;letter-spacing:.03em;transition:background .12s}
+.ms-add-btn:hover{background:var(--lab-lt)}
+.ms-foot-sum{font-size:11px;color:var(--ink3)}
+.ms-foot-sum span{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--mat);margin-left:4px}
+
+.grand-bar{display:flex;align-items:stretch;background:var(--ink);border-radius:10px;margin-top:20px;overflow:hidden}
+.gb-item{flex:1;padding:18px 20px;border-right:1px solid #333;text-align:center}
+.gb-item:last-child{border-right:none}
+.gb-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.gb-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:#fff}
+.gb-val.hi{color:#6EDFA0;font-size:18px}
+
+/* PAYROLL — full rewrite */
+.pr-top{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.pr-kpi{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+.pr-kpi.hi{border-left:3px solid var(--green)}
+.pr-kpi.amber{border-left:3px solid #F59E0B}
+.pr-kpi-eye{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:4px}
+.pr-kpi-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;color:var(--ink)}
+.pr-kpi.hi .pr-kpi-val{color:var(--green)}
+.pr-kpi.amber .pr-kpi-val{color:#D97706}
+.pr-kpi-sub{font-size:11px;color:var(--ink3);margin-top:3px}
+
+/* toolbar */
+.pr-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:12px 16px}
+.pr-toolbar-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-right:4px}
+.wklabel{font-size:12px;color:var(--ink2);font-weight:500}
+.wkinput{font-family:'Inter',sans-serif;font-size:12px;border:1px solid var(--rule);border-radius:6px;padding:5px 10px;background:var(--white);color:var(--ink);outline:none}
+.wkinput:focus{border-color:var(--blue)}
+.pr-nav-btn{background:var(--white);border:1px solid var(--rule);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;font-family:'Inter',sans-serif}
+.pr-nav-btn:hover{background:var(--bg);color:var(--ink)}
+.spacer{flex:1}
+.pr-mode-toggle{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden;font-size:11px}
+.pr-mode-btn{padding:5px 12px;background:var(--white);border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;color:var(--ink2);font-weight:500}
+.pr-mode-btn.active{background:var(--blue);color:#fff;font-weight:600}
+
+/* table wrap */
+.pr-wrap{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:auto}
+.pr-tbl{width:100%;border-collapse:collapse;min-width:900px}
+.pr-tbl th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);padding:11px 10px;text-align:left;border-bottom:2px solid var(--rule);background:#FAFAF8;white-space:nowrap;position:sticky;top:0;z-index:2}
+.pr-tbl th.r,.pr-tbl th.ctr{text-align:right}
+.pr-tbl th.ctr{text-align:center}
+.pr-tbl td{padding:8px 10px;font-size:13px;color:var(--ink2);border-bottom:1px solid #F5F2EE;vertical-align:middle}
+.pr-tbl tbody tr:last-child td{border-bottom:none}
+.pr-tbl tbody tr:hover td{background:#FAFAF8}
+.pr-tbl td.mono{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink);text-align:right}
+.pr-tbl td.pay-cell{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#16A34A;text-align:right}
+.pr-tbl .totrow td{background:#F0F4F8;font-weight:700;color:var(--ink);border-top:2px solid var(--rule)}
+.pr-tbl .totrow td.pay-cell{color:#16A34A;font-size:14px}
+.pr-tbl .role-hdr td{background:#F6F3EE;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:5px 10px;border-bottom:1px solid var(--rule)}
+
+/* inline editable */
+.ti{font-family:'Inter',sans-serif;font-size:13px;border:1px solid transparent;border-radius:4px;padding:3px 6px;background:transparent;color:var(--ink);width:100%;outline:none;transition:all .12s}
+.ti:hover{border-color:var(--rule);background:var(--white)}
+.ti:focus{border-color:var(--blue);background:var(--white);box-shadow:0 0 0 2px rgba(29,95,160,.1)}
+.ti.r{text-align:right}
+.del-btn{background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
+.del-btn:hover{background:#FECACA}
+
+/* day cells */
+.day-col{width:72px;min-width:66px;text-align:center}
+.day-col-head{text-align:center!important;font-size:10px;line-height:1.4}
+.day-col-head .dn{font-weight:700;display:block;font-size:11px}
+.day-col-head .dd{font-size:10px;color:var(--ink3);font-weight:400;display:block}
+.day-col-head.sunday .dn{color:#DC2626}
+.today-col{background:rgba(29,95,160,0.06)!important}
+.today-col .dn{color:var(--blue)!important}
+
+/* day cell inner */
+.dc-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.day-inp{width:52px;text-align:center;padding:4px 3px;border:1px solid var(--rule);border-radius:5px;background:var(--white);color:var(--ink);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;transition:all .12s}
+.day-inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(29,95,160,.15)}
+.day-inp.absent{background:#F9F9F7;color:#ccc;border-color:#eee}
+.day-inp.worked{background:#DCFCE7;color:#15803D;border-color:#BBF7D0;font-weight:600}
+.day-inp.overtime{background:#FEF9C3;color:#92400E;border-color:#FDE68A;font-weight:600}
+.day-inp.half{background:#E0F2FE;color:#0369A1;border-color:#BAE6FD}
+
+/* quick preset btns under each input */
+.qb-row{display:flex;gap:2px;margin-top:1px}
+.qb{border:none;border-radius:3px;padding:1px 4px;font-size:9px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;line-height:1.4}
+.qb.qb-full{background:#DCFCE7;color:#15803D}
+.qb.qb-half{background:#E0F2FE;color:#0369A1}
+.qb.qb-off {background:#F3F4F6;color:#9CA3AF}
+.qb:hover{opacity:.8;transform:scale(1.05)}
+
+/* total + pay cells */
+.total-hrs-cell{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--blue);text-align:right;font-size:13px}
+.day-tot-cell{text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+
+/* saved weeks panel */
+.pr-weeks-panel{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+.pr-weeks-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:12px}
+.wk-saved-item{border:1px solid var(--rule);border-radius:7px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:background .12s}
+.wk-saved-item:hover{background:#F8FFF8}
+.wk-saved-item.wk-current{border-color:#86EFAC;background:#F0FDF4}
+.wk-saved-label{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.wk-saved-pay{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#15803D;margin-bottom:6px}
+.wk-saved-actions{display:flex;gap:4px;align-items:center}
+
+.pr-hint{margin-top:8px;font-size:10px;color:var(--ink3);line-height:1.7}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:12px;padding:28px;width:420px;max-width:92vw;box-shadow:0 16px 48px rgba(0,0,0,.18)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:-.01em}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:5px}
+.form-input{width:100%;font-family:'Inter',sans-serif;font-size:13px;border:1px solid var(--rule);border-radius:6px;padding:8px 12px;color:var(--ink);outline:none;transition:border-color .12s}
+.form-input:focus{border-color:var(--lab)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--rule)}
+
+/* PROFIT CALCULATOR */
+.pf-hero{background:var(--ink);border-radius:12px;padding:28px 32px;margin-bottom:20px;display:flex;align-items:center;gap:0}
+.pf-hero-left{flex-shrink:0;padding-right:32px}
+.pf-hero-eye{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:8px}
+.pf-hero-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:500;letter-spacing:-.03em;color:#6EDFA0;line-height:1}
+.pf-hero-num.loss{color:#F4847A}
+.pf-hero-sub{font-size:12px;color:#888;margin-top:6px}
+.pf-hero-divider{width:1px;background:#333;align-self:stretch;margin:0 32px;flex-shrink:0}
+.pf-hero-right{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.pf-hero-stat{padding:0 20px;border-right:1px solid #333}
+.pf-hero-stat:first-child{padding-left:0}
+.pf-hero-stat:last-child{border-right:none}
+.pf-stat-lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-weight:500}
+.pf-stat-val{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:500;color:#fff}
+.pf-stat-val.danger{color:#F4847A}
+.pf-stat-val.green{color:#6EDFA0}
+
+.pf-bar-wrap{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:18px 22px;margin-bottom:20px}
+.pf-bar-track{height:32px;border-radius:6px;overflow:hidden;display:flex;background:#F0ECE6;margin-bottom:10px}
+.pf-bar-mat{background:var(--mat);height:100%;display:flex;align-items:center;padding-left:8px;transition:width .6s ease;overflow:hidden;min-width:0}
+.pf-bar-lab{background:var(--lab);height:100%;display:flex;align-items:center;padding-left:6px;transition:width .6s ease;overflow:hidden;min-width:0}
+.pf-bar-oth{background:#8A5A00;height:100%;display:flex;align-items:center;padding-left:6px;transition:width .6s ease;overflow:hidden;min-width:0}
+.pf-bar-profit{background:var(--green);height:100%;display:flex;align-items:center;padding-left:6px;transition:width .6s ease;overflow:hidden;min-width:0}
+.pf-bar-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,.85);white-space:nowrap}
+.pf-bar-legend{display:flex;gap:16px;flex-wrap:wrap}
+.pf-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3)}
+.pf-leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+.pf-grid{display:grid;grid-template-columns:1fr 400px;gap:20px;align-items:start}
+
+.pf-panel{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.pf-panel-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--rule);background:#FAFAF8}
+.pf-panel-title{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.pf-panel-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.pf-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);padding:14px 22px 6px;border-top:1px solid var(--rule)}
+.pf-input-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 22px}
+.pf-input-row:hover{background:#FDFCFB}
+.pf-input-label{flex:1}
+.pf-input-label span:first-child{font-size:13px;color:var(--ink);display:block;font-weight:500}
+.pf-input-hint{font-size:10px;color:var(--ink3);display:block;margin-top:1px}
+.pf-input-field{display:flex;align-items:center;gap:4px;background:#F6F3EE;border:1px solid var(--rule);border-radius:6px;padding:0 10px;flex-shrink:0}
+.pf-input-field:focus-within{border-color:var(--lab);background:var(--white)}
+.pf-peso{font-size:13px;color:var(--ink3);font-weight:500}
+.pf-input{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;border:none;background:transparent;width:120px;text-align:right;color:var(--ink);outline:none;padding:7px 0}
+
+.pf-other-row{display:flex;align-items:center;gap:10px;padding:6px 22px}
+.pf-other-row:hover{background:#FDFCFB}
+.pf-other-name{font-family:'Inter',sans-serif;font-size:13px;border:1px solid transparent;border-radius:4px;padding:4px 8px;background:transparent;color:var(--ink);flex:1;outline:none;transition:all .12s}
+.pf-other-name:hover{border-color:var(--rule);background:var(--white)}
+.pf-other-name:focus{border-color:var(--lab);background:var(--white)}
+.pf-other-amt{font-family:'JetBrains Mono',monospace;font-size:13px;border:1px solid transparent;border-radius:4px;padding:4px 8px;background:transparent;color:var(--ink);width:110px;text-align:right;outline:none;transition:all .12s}
+.pf-other-amt:hover{border-color:var(--rule);background:var(--white)}
+.pf-other-amt:focus{border-color:var(--lab);background:var(--white)}
+.pf-del-btn{background:none;border:none;cursor:pointer;font-size:13px;color:var(--ink3);padding:3px 6px;border-radius:4px;transition:all .12s;line-height:1}
+.pf-del-btn:hover{background:#FDECEA;color:var(--danger)}
+.pf-add-row-btn{display:flex;align-items:center;gap:5px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;color:var(--lab);background:none;border:none;cursor:pointer;padding:10px 22px;letter-spacing:.03em;transition:all .12s;border-top:1px solid var(--rule);width:100%}
+.pf-add-row-btn:hover{background:var(--lab-lt)}
+
+.pf-right-col{display:flex;flex-direction:column;gap:0}
+.pf-card{background:var(--white);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.pf-card-hdr{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);padding:14px 18px;border-bottom:1px solid var(--rule);background:#FAFAF8}
+.pf-breakdown-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #F5F2EE;font-size:12px}
+.pf-breakdown-row:last-of-type{border-bottom:none}
+.pf-breakdown-label{display:flex;align-items:center;gap:8px;color:var(--ink2)}
+.pf-bd-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.pf-breakdown-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--ink)}
+.pf-breakdown-pct{font-size:10px;color:var(--ink3);margin-left:6px}
+.pf-card-total-row{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--rule);background:#FAFAF8;font-size:12px;font-weight:600;color:var(--ink)}
+.pf-card-total-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700}
+.pf-card-total-val.danger{color:var(--danger)}
+.pf-card-total-val.green{color:var(--green)}
+
+.pf-summary-row{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;border-bottom:1px solid #F5F2EE;font-size:12px}
+.pf-summary-row:last-child{border-bottom:none}
+.pf-summary-row.big{padding:14px 18px;background:#F9FDF9}
+.pf-summary-label{color:var(--ink2)}
+.pf-summary-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink)}
+.pf-summary-val.danger{color:var(--danger)}
+.pf-summary-val.green{color:var(--green)}
+.pf-summary-row.big .pf-summary-val{font-size:18px}
+.pf-summary-divider{height:1px;background:var(--rule);margin:4px 0}
+
+.pf-scenario-note{font-size:11px;color:var(--ink3);padding:8px 18px 2px}
+.pf-scenario-row{display:flex;align-items:center;justify-content:space-between;padding:8px 18px;border-bottom:1px solid #F5F2EE;font-size:11px}
+.pf-scenario-row:last-child{border-bottom:none}
+.pf-sc-label{color:var(--ink2)}
+.pf-sc-val{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.pf-sc-val.good{color:var(--green)}
+.pf-sc-val.bad{color:var(--danger)}
+.pf-sc-val.warn{color:var(--amber)}
+
+@media(max-width:980px){
+  .pf-grid{grid-template-columns:1fr}
+  .pf-hero{flex-direction:column;gap:20px}
+  .pf-hero-divider{display:none}
+  .pf-hero-right{grid-template-columns:repeat(2,1fr)}
+  .pf-hero-stat{border-right:none;padding:8px 0;border-bottom:1px solid #333}
+  .pf-hero-stat:nth-child(odd){border-right:1px solid #333}
+}
+
+
+  .kpi-row,.pr-top{grid-template-columns:1fr 1fr}
+  .floors-grid,.fdc-body{grid-template-columns:1fr}
+  .fdc-col:first-child{border-right:none;border-bottom:1px solid var(--rule)}
+  .chart-row{grid-template-columns:90px 1fr 80px}
+  .nav-btn{padding:5px 8px;font-size:10px}
+  .grand-bar{flex-wrap:wrap}
+  .gb-item{min-width:50%}
+  .pb-kpi-row{grid-template-columns:1fr 1fr}
+  .pb-right{flex-wrap:wrap}
+  .pb-col{min-width:80px}
+  .pb-body-inner{grid-template-columns:1fr}
+  .pb-body-col:first-child{border-right:none;border-bottom:1px solid var(--rule)}
+}
+.pb-kpi-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+.pb-kpi{background:var(--white);border:1px solid var(--rule);border-radius:10px;padding:18px 22px}
+.pb-kpi.hi{border-left:3px solid var(--mat)}
+.pb-kpi-eye{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);margin-bottom:5px}
+.pb-kpi-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;color:var(--ink)}
+.pb-kpi.hi .pb-kpi-val{color:var(--mat);font-size:28px}
+.pb-kpi-sub{font-size:11px;color:var(--ink3);margin-top:4px}
+.pb-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+
+.pb-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--white)}
+
+.pb-row{border-bottom:1px solid var(--rule)}
+.pb-row:last-child{border-bottom:none}
+.pb-row-hdr{display:flex;align-items:stretch;cursor:pointer;transition:background .12s;user-select:none}
+.pb-row-hdr:hover{background:#FAFAF8}
+
+.pb-status-bar{width:5px;flex-shrink:0}
+.pb-status-bar.done{background:var(--green)}
+.pb-status-bar.inprog{background:var(--amber)}
+.pb-status-bar.pending{background:var(--rule)}
+
+.pb-seq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);padding:0 12px;display:flex;align-items:center;min-width:44px;border-right:1px solid var(--rule);background:#FAFAF8;flex-shrink:0}
+.pb-main{flex:1;padding:12px 16px}
+.pb-milestone-title{font-size:13px;font-weight:600;color:var(--ink);line-height:1.35}
+.pb-milestone-title em{font-style:normal;color:var(--mat);font-weight:700}
+.pb-milestone-desc{font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.5}
+.pb-right{display:flex;align-items:center;gap:0;flex-shrink:0;border-left:1px solid var(--rule)}
+.pb-col{padding:10px 14px;text-align:right;min-width:110px;border-left:1px solid var(--rule)}
+.pb-col:first-child{border-left:none}
+.pb-col-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:3px}
+.pb-col-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--ink)}
+.pb-col-val.mat{color:var(--mat)}
+.pb-col-val.lab{color:var(--lab)}
+.pb-col-val.tot{color:var(--ink);font-size:13px}
+.pb-pct-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:3px;display:inline-block}
+.pb-pct-badge.done{background:var(--green-lt);color:var(--green)}
+.pb-pct-badge.inprog{background:var(--amber-lt);color:var(--amber)}
+.pb-pct-badge.pending{background:#F0ECE6;color:var(--ink3)}
+.pb-chev-col{padding:0 12px;display:flex;align-items:center;color:var(--ink3);font-size:11px;border-left:1px solid var(--rule)}
+.pb-chev-icon{transition:transform .2s;display:inline-block}
+.pb-chev-icon.open{transform:rotate(180deg)}
+
+.pb-body{display:none;border-top:1px solid var(--rule);background:#FAFAF8}
+.pb-body.open{display:block}
+.pb-body-inner{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.pb-body-col{padding:16px 20px}
+.pb-body-col:first-child{border-right:1px solid var(--rule)}
+.pb-body-col-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pb-body-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:3px 9px;border-radius:3px}
+.pb-body-col-title.mat{background:var(--mat-lt);color:var(--mat)}
+.pb-body-col-title.lab{background:var(--lab-lt);color:var(--lab)}
+.pb-body-subtot{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--ink3)}
+.pb-items-tbl{width:100%;border-collapse:collapse}
+.pb-items-tbl th{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);padding:0 0 6px;text-align:left;border-bottom:1px solid var(--rule)}
+.pb-items-tbl th.r{text-align:right}
+.pb-items-tbl td{padding:6px 0;font-size:11px;color:var(--ink2);border-bottom:1px solid #F0EDE8;vertical-align:middle}
+.pb-items-tbl tr:last-child td{border-bottom:none}
+.pb-items-tbl td.mono{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--ink);text-align:right;padding-left:12px;white-space:nowrap}
+.pb-items-tbl td.tc{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--mat);text-align:right;padding-left:12px;white-space:nowrap}
+.pb-status-select{font-family:'Inter',sans-serif;font-size:10px;border:1px solid var(--rule);border-radius:4px;padding:3px 6px;background:var(--white);color:var(--ink);outline:none;cursor:pointer}
+.pb-status-select:focus{border-color:var(--lab)}
+.pb-body-footer{padding:10px 20px;border-top:1px solid var(--rule);display:flex;justify-content:flex-end;align-items:center;gap:16px}
+.pb-total-label{font-size:11px;color:var(--ink3)}
+.pb-total-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--mat)}
+.pb-add-item-btn{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:var(--lab);background:none;border:1px solid var(--lab-lt);border-radius:4px;cursor:pointer;padding:3px 8px;transition:background .12s}
+.pb-add-item-btn:hover{background:var(--lab-lt)}
+
+/* editable in billing */
+.pei{font-family:'Inter',sans-serif;font-size:11px;border:1px solid transparent;border-radius:3px;padding:2px 5px;background:transparent;color:var(--ink);width:100%;outline:none;transition:all .12s}
+.pei:hover{border-color:var(--rule);background:var(--white)}
+.pei:focus{border-color:var(--lab);background:var(--white)}
+.pei.r{text-align:right}
+
+@media(max-width:780px){
+  .pb-kpi-row{grid-template-columns:1fr 1fr}
+  .pb-right{flex-wrap:wrap}
+  .pb-col{min-width:80px}
+  .pb-body-inner{grid-template-columns:1fr}
+  .pb-body-col:first-child{border-right:none;border-bottom:1px solid var(--rule)}
+}
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-logo">SC1</span>
+    <div class="topbar-div"></div>
+    <span class="topbar-title">Velarde Construction</span>
+    <span class="topbar-tag">3-STOREY · 370 SQM TFA</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-btn active" onclick="goPage('overview',this)">Overview</button>
+    <button class="nav-btn" onclick="goPage('detail',this)">Floor Detail</button>
+    <button class="nav-btn" onclick="goPage('breakdown',this)">Material Breakdown</button>
+    <button class="nav-btn" onclick="goPage('billing',this)">Progress Billing</button>
+    <button class="nav-btn" onclick="goPage('profit',this)">Profit Calculator</button>
+    <button class="nav-btn" onclick="goPage('payroll',this)">Payroll</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- OVERVIEW -->
+<div id="page-overview" class="page active">
+  <div class="kpi-row">
+    <div class="kpi grand">
+      <div class="kpi-eye">Total Estimated Cost</div>
+      <div class="kpi-num" id="kpi-grand"></div>
+      <div class="kpi-sub">All floors · revalidated unit prices</div>
+      <div class="kpi-split"><span class="pill mat" id="kpi-mat-pct"></span><span class="pill lab" id="kpi-lab-pct"></span></div>
+    </div>
+    <div class="kpi"><div class="kpi-eye">Materials</div><div class="kpi-num" id="kpi-mat"></div><div class="kpi-sub" id="kpi-mat-sub"></div></div>
+    <div class="kpi"><div class="kpi-eye">Labor</div><div class="kpi-num" id="kpi-lab"></div><div class="kpi-sub" id="kpi-lab-sub"></div></div>
+    <div class="kpi"><div class="kpi-eye">Ready Mix (3 slabs)</div><div class="kpi-num" id="kpi-rm"></div><div class="kpi-sub">2F · 3F · Slab Roof</div></div>
+  </div>
+  <div class="sec-label">
+    <h2>Materials vs Labor per floor</h2>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--mat)"></div>Materials</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--lab)"></div>Labor</div>
+    </div>
+  </div>
+  <div class="chart-card" id="chartCard"></div>
+  <div class="sec-label" style="margin-top:4px"><h2>Per floor — click to expand</h2></div>
+  <div class="floors-grid" id="floorsGrid"></div>
+</div>
+
+<!-- FLOOR DETAIL -->
+<div id="page-detail" class="page">
+  <div class="sec-label"><h2>Select a floor</h2></div>
+  <div class="floor-pills" id="floorPills"></div>
+  <div class="fdc" id="fullDetail"></div>
+</div>
+
+<!-- MATERIAL BREAKDOWN -->
+<div id="page-breakdown" class="page">
+  <div class="mb-toolbar">
+    <h2>Material Breakdown per Milestone</h2>
+    <select class="fsel" id="floorFilter" onchange="renderBreakdown()">
+      <option value="all">All Floors</option>
+      <option value="gf">Ground Floor</option>
+      <option value="2f">2nd Floor</option>
+      <option value="3f">3rd Floor</option>
+      <option value="rd">Slab Roof / Roof Deck</option>
+    </select>
+    <div class="spacer"></div>
+    <button class="btn btn-outline btn-sm" onclick="expandAll()">Expand All</button>
+    <button class="btn btn-outline btn-sm" onclick="collapseAll()">Collapse All</button>
+  </div>
+  <div class="milestone-list" id="milestoneList"></div>
+  <div class="grand-bar" id="grandBar"></div>
+</div>
+
+<!-- PROGRESS BILLING -->
+<div id="page-billing" class="page">
+  <div class="pb-kpi-row">
+    <div class="pb-kpi hi"><div class="pb-kpi-eye">Total Contract Price (TCP)</div><div class="pb-kpi-val" id="pb-tcp"></div><div class="pb-kpi-sub">3-Storey · revalidated pricing</div></div>
+    <div class="pb-kpi" style="border-left:3px solid var(--green)"><div class="pb-kpi-eye">Amount Released to Date</div><div class="pb-kpi-val" style="color:var(--green)">₱2,175,000.00</div><div class="pb-kpi-sub">9 milestones · As of June 13</div></div>
+    <div class="pb-kpi" style="border-left:3px solid var(--amber)"><div class="pb-kpi-eye">Remaining Balance</div><div class="pb-kpi-val" style="color:var(--amber)">₱3,254,932.00</div><div class="pb-kpi-sub">TCP minus released · to be billed</div></div>
+    <div class="pb-kpi"><div class="pb-kpi-eye">Milestones</div><div class="pb-kpi-val" id="pb-count"></div><div class="pb-kpi-sub" id="pb-done"></div></div>
+  </div>
+
+  <div class="pb-toolbar">
+    <h2 style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3)">Progress Billing Milestones</h2>
+    <div class="spacer"></div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink3)">
+      <span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block"></span>Done
+      <span style="width:10px;height:10px;background:var(--amber);border-radius:2px;display:inline-block;margin-left:8px"></span>In Progress
+      <span style="width:10px;height:10px;background:var(--rule);border-radius:2px;display:inline-block;margin-left:8px"></span>Pending
+    </div>
+  </div>
+
+  <div class="pb-list" id="pbList"></div>
+</div>
+
+<!-- PROFIT CALCULATOR -->
+<div id="page-profit" class="page">
+
+  <!-- HERO PROFIT BANNER -->
+  <div class="pf-hero" id="pfHero">
+    <div class="pf-hero-left">
+      <div class="pf-hero-eye">Estimated Contractor Profit</div>
+      <div class="pf-hero-num" id="pf-profit-num">₱0</div>
+      <div class="pf-hero-sub" id="pf-profit-margin">Margin: 0%</div>
+    </div>
+    <div class="pf-hero-divider"></div>
+    <div class="pf-hero-right">
+      <div class="pf-hero-stat">
+        <div class="pf-stat-lbl">Contract Price (TCP)</div>
+        <div class="pf-stat-val" id="pf-tcp-display">₱5,000,000</div>
+      </div>
+      <div class="pf-hero-stat">
+        <div class="pf-stat-lbl">Total Cost to Contractor</div>
+        <div class="pf-stat-val danger" id="pf-cost-display">₱0</div>
+      </div>
+      <div class="pf-hero-stat">
+        <div class="pf-stat-lbl">Profit Margin</div>
+        <div class="pf-stat-val green" id="pf-margin-display">0%</div>
+      </div>
+      <div class="pf-hero-stat">
+        <div class="pf-stat-lbl">Return on Cost</div>
+        <div class="pf-stat-val green" id="pf-roc-display">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFIT BAR -->
+  <div class="pf-bar-wrap">
+    <div class="pf-bar-track">
+      <div class="pf-bar-mat" id="pfBarMat" style="width:0%">
+        <span class="pf-bar-lbl">Materials</span>
+      </div>
+      <div class="pf-bar-lab" id="pfBarLab" style="width:0%">
+        <span class="pf-bar-lbl">Labor</span>
+      </div>
+      <div class="pf-bar-oth" id="pfBarOth" style="width:0%">
+        <span class="pf-bar-lbl">Other Costs</span>
+      </div>
+      <div class="pf-bar-profit" id="pfBarProfit" style="width:0%">
+        <span class="pf-bar-lbl">Profit</span>
+      </div>
+    </div>
+    <div class="pf-bar-legend">
+      <span class="pf-leg-item"><span class="pf-leg-dot" style="background:#B84D1A"></span>Materials</span>
+      <span class="pf-leg-item"><span class="pf-leg-dot" style="background:#1D5FA0"></span>Labor</span>
+      <span class="pf-leg-item"><span class="pf-leg-dot" style="background:#8A5A00"></span>Other Costs</span>
+      <span class="pf-leg-item"><span class="pf-leg-dot" style="background:#1A7A3A"></span>Profit</span>
+    </div>
+  </div>
+
+  <div class="pf-grid">
+
+    <!-- LEFT: INPUTS -->
+    <div class="pf-panel">
+      <div class="pf-panel-hdr">
+        <div class="pf-panel-title">Revenue & Costs</div>
+        <div class="pf-panel-sub">Edit any value — profit updates instantly</div>
+      </div>
+
+      <!-- CONTRACT PRICE -->
+      <div class="pf-section-title">Contract</div>
+      <div class="pf-input-row">
+        <div class="pf-input-label">
+          <span>Total Contract Price (TCP)</span>
+          <span class="pf-input-hint">What the client pays</span>
+        </div>
+        <div class="pf-input-field">
+          <span class="pf-peso">₱</span>
+          <input class="pf-input" type="number" id="pf-tcp" value="5000000" min="0" step="10000" onchange="calcProfit()" oninput="calcProfit()">
+        </div>
+      </div>
+
+      <!-- MATERIAL COSTS -->
+      <div class="pf-section-title" style="margin-top:20px">Material Cost</div>
+      <div class="pf-input-row">
+        <div class="pf-input-label">
+          <span>Materials (from Breakdown)</span>
+          <span class="pf-input-hint">Auto-pulled from Material Breakdown tab</span>
+        </div>
+        <div class="pf-input-field">
+          <span class="pf-peso">₱</span>
+          <input class="pf-input" type="number" id="pf-mat" min="0" step="1000" onchange="calcProfit()" oninput="calcProfit()">
+        </div>
+      </div>
+      <div class="pf-input-row">
+        <div class="pf-input-label">
+          <span>Material wastage / buffer</span>
+          <span class="pf-input-hint">Typically 5–10% of materials</span>
+        </div>
+        <div class="pf-input-field">
+          <span class="pf-peso">₱</span>
+          <input class="pf-input" type="number" id="pf-waste" value="0" min="0" step="1000" onchange="calcProfit()" oninput="calcProfit()">
+        </div>
+      </div>
+
+      <!-- LABOR COSTS -->
+      <div class="pf-section-title" style="margin-top:20px">Labor Cost</div>
+      <div class="pf-input-row">
+        <div class="pf-input-label">
+          <span>Total Labor Payroll</span>
+          <span class="pf-input-hint">Auto-pulled from Payroll tab</span>
+        </div>
+        <div class="pf-input-field">
+          <span class="pf-peso">₱</span>
+          <input class="pf-input" type="number" id="pf-lab" min="0" step="1000" onchange="calcProfit()" oninput="calcProfit()">
+        </div>
+      </div>
+      <div class="pf-input-row">
+        <div class="pf-input-label">
+          <span>Foreman / site supervisor bonus</span>
+          <span class="pf-input-hint">Performance / completion incentives</span>
+        </div>
+        <div class="pf-input-field">
+          <span class="pf-peso">₱</span>
+          <input class="pf-input" type="number" id="pf-bonus" value="0" min="0" step="500" onchange="calcProfit()" oninput="calcProfit()">
+        </div>
+      </div>
+
+      <!-- OTHER OPERATING COSTS -->
+      <div class="pf-section-title" style="margin-top:20px">Other Operating Costs</div>
+      <div id="pf-other-rows"></div>
+      <button class="pf-add-row-btn" onclick="addOtherCost()">+ Add cost item</button>
+    </div>
+
+    <!-- RIGHT: BREAKDOWN CARDS -->
+    <div class="pf-right-col">
+
+      <!-- COST BREAKDOWN CARD -->
+      <div class="pf-card">
+        <div class="pf-card-hdr">Cost Breakdown</div>
+        <div id="pf-breakdown-rows"></div>
+        <div class="pf-card-total-row">
+          <span>Total Cost to Contractor</span>
+          <span class="pf-card-total-val danger" id="pf-cost-card">₱0</span>
+        </div>
+      </div>
+
+      <!-- PROFIT SUMMARY CARD -->
+      <div class="pf-card" style="margin-top:16px">
+        <div class="pf-card-hdr">Profit Summary</div>
+        <div class="pf-summary-row">
+          <span class="pf-summary-label">Contract Price (TCP)</span>
+          <span class="pf-summary-val" id="ps-tcp">₱0</span>
+        </div>
+        <div class="pf-summary-row">
+          <span class="pf-summary-label">Total Cost</span>
+          <span class="pf-summary-val danger" id="ps-cost">₱0</span>
+        </div>
+        <div class="pf-summary-divider"></div>
+        <div class="pf-summary-row big">
+          <span class="pf-summary-label">Gross Profit</span>
+          <span class="pf-summary-val green" id="ps-profit">₱0</span>
+        </div>
+        <div class="pf-summary-row">
+          <span class="pf-summary-label">Profit Margin (Profit / TCP)</span>
+          <span class="pf-summary-val green" id="ps-margin">0%</span>
+        </div>
+        <div class="pf-summary-row">
+          <span class="pf-summary-label">Return on Cost (Profit / Cost)</span>
+          <span class="pf-summary-val green" id="ps-roc">0%</span>
+        </div>
+        <div class="pf-summary-row">
+          <span class="pf-summary-label">Break-even (Cost = TCP)</span>
+          <span class="pf-summary-val" id="ps-be" style="color:var(--ink3)">—</span>
+        </div>
+      </div>
+
+      <!-- SCENARIO CARD -->
+      <div class="pf-card" style="margin-top:16px">
+        <div class="pf-card-hdr">Quick Scenarios</div>
+        <div class="pf-scenario-note">What if material or labor costs shift?</div>
+        <div id="pf-scenarios"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- PAYROLL -->
+<div id="page-payroll" class="page">
+
+  <!-- KPI row -->
+  <div class="pr-top">
+    <div class="pr-kpi hi">
+      <div class="pr-kpi-eye">Total Payroll (this week)</div>
+      <div class="pr-kpi-val" id="pr-total">₱0.00</div>
+      <div class="pr-kpi-sub" id="pr-week-disp">—</div>
+    </div>
+    <div class="pr-kpi">
+      <div class="pr-kpi-eye">Foreman</div>
+      <div class="pr-kpi-val" id="pr-foreman">₱0.00</div>
+      <div class="pr-kpi-sub" id="pr-foreman-n">0 person(s)</div>
+    </div>
+    <div class="pr-kpi">
+      <div class="pr-kpi-eye">Skilled / Labor</div>
+      <div class="pr-kpi-val" id="pr-skilled">₱0.00</div>
+      <div class="pr-kpi-sub" id="pr-skilled-n">0 skilled · 0 labor</div>
+    </div>
+    <div class="pr-kpi amber">
+      <div class="pr-kpi-eye">Total Hours (week)</div>
+      <div class="pr-kpi-val" id="pr-totalhrs">0.0 hrs</div>
+      <div class="pr-kpi-sub" id="pr-labor-n">all workers combined</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="pr-toolbar">
+    <span class="pr-toolbar-title">Daily Timesheet</span>
+    <button class="pr-nav-btn" onclick="prevWeek()">&#8592;</button>
+    <span class="wklabel">Week of</span>
+    <input class="wkinput" type="date" id="weekDate" onchange="onWeekChange()">
+    <button class="pr-nav-btn" onclick="nextWeek()">&#8594;</button>
+    <button class="pr-nav-btn" onclick="goToday()">Today</button>
+    <div class="spacer"></div>
+    <span id="prSaveBadge" style="font-size:11px;font-weight:600;opacity:0;transition:opacity .4s;min-width:80px;text-align:right"></span>
+    <div class="pr-mode-toggle">
+      <button class="pr-mode-btn active" id="modeHrsBtn" onclick="setMode('hours')">Hours</button>
+      <button class="pr-mode-btn" id="modeDaysBtn" onclick="setMode('days')">Days</button>
+    </div>
+    <button id="prSaveWeekBtn" class="btn btn-green btn-sm" onclick="saveWeek(getWeekKey())">💾 Save Week</button>
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#8595; CSV</button>
+    <button class="btn btn-outline btn-sm" onclick="openEmpModal()">+ Employee</button>
+    <button class="btn btn-outline btn-sm" style="color:#DC2626;border-color:#FECACA" onclick="clearAllData()">&#128465; Clear All</button>
+  </div>
+
+  <!-- Two-column layout: timesheet + saved weeks sidebar -->
+  <div style="display:grid;grid-template-columns:1fr 220px;gap:14px;align-items:start">
+
+    <!-- Left: main timesheet table -->
+    <div>
+      <div class="pr-wrap">
+        <table class="pr-tbl">
+          <thead id="prHead"></thead>
+          <tbody id="prBody"></tbody>
+          <tfoot id="prFoot"></tfoot>
+        </table>
+      </div>
+      <div class="pr-hint">
+        <b>F</b> = full day (8h) &nbsp;·&nbsp; <b>H</b> = half day (4h) &nbsp;·&nbsp; <b>O</b> = absent &nbsp;·&nbsp;
+        Hourly rate = Daily Rate ÷ 8 &nbsp;·&nbsp; After entering hours tap <b>💾 Save Week</b> to store permanently
+      </div>
+    </div>
+
+    <!-- Right: saved weeks list -->
+    <div class="pr-weeks-panel">
+      <div class="pr-weeks-title">📅 Saved Weeks</div>
+      <div id="prWeeksList">
+        <div style="color:var(--ink3);font-size:12px">No weeks saved yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cumulative section -->
+  <div class="pr-cumul" id="prCumul" style="margin-top:14px">
+    <div class="pr-cumul-title">📊 Cumulative Payroll — All Saved Weeks</div>
+    <div class="pr-cumul-grid" id="prCumulGrid">
+      <div style="color:var(--ink3);font-size:12px;grid-column:1/-1">Save at least one week to see cumulative totals.</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+// ── FLOOR COLORS & LABELS
+const FC={gf:'#7A4A20','2f':'#1D5FA0','3f':'#2D7A4F',rd:'#6A4A8A'};
+const FL={gf:'Ground Floor','2f':'2nd Floor','3f':'3rd Floor',rd:'Slab Roof / Roof Deck'};
+
+// ── MILESTONE DATA (quantity-level breakdown per work item)
+let milestones=[
+  {id:'gf-1',floor:'gf',name:'Downpayment & Mobilization',
+   items:[
+    {name:'Mobilization allowance / deposits',qty:1,unit:'lot',up:10000},
+   ]},
+  {id:'gf-2',floor:'gf',name:'Demolition, Hauling, Excavation & Soil Poisoning',
+   items:[
+    {name:'Hauling & demolition materials',qty:1,unit:'lot',up:100000},
+    {name:'Soil poisoning chemical',qty:1,unit:'lot',up:30000},
+    {name:'Miscellaneous (excavation)',qty:1,unit:'lot',up:20000},
+   ]},
+  {id:'gf-3',floor:'gf',name:'Foundation Part 1 — Right Side Footings, Tie Beams & Column Starters',
+   items:[
+    {name:'Gravel (foundation bedding)',qty:4,unit:'truck',up:3500},
+    {name:'Sand',qty:2,unit:'truck',up:3000},
+    {name:'Cement',qty:80,unit:'sack',up:220},
+    {name:'16mm Rebar (footings & column starters)',qty:100,unit:'pcs',up:355},
+    {name:'10mm Rebar (stirrups & tie beams)',qty:60,unit:'pcs',up:155},
+    {name:'Coco Lumber (formworks)',qty:60,unit:'pcs',up:160},
+    {name:'Plywood (formwork sheathing)',qty:10,unit:'sheets',up:680},
+    {name:'G.I. Tie Wire',qty:5,unit:'rolls',up:400},
+    {name:'Nails (assorted)',qty:3,unit:'kg',up:120},
+   ]},
+  {id:'gf-4',floor:'gf',name:'Right Side Column & Compaction — Column Concrete, Early CHB',
+   items:[
+    {name:'16mm Rebar (column verticals)',qty:80,unit:'pcs',up:355},
+    {name:'10mm Rebar (column ties)',qty:40,unit:'pcs',up:155},
+    {name:'Cement (column concreting)',qty:60,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'CHB 4-inch',qty:200,unit:'pcs',up:18},
+    {name:'Coco Lumber (column formwork)',qty:40,unit:'pcs',up:160},
+    {name:'Plywood',qty:6,unit:'sheets',up:680},
+   ]},
+  {id:'gf-5',floor:'gf',name:'Right GF Slab Pour — EPS Prep (conduits, floor drains, sanitary sleeves)',
+   items:[
+    {name:'Cement (slab)',qty:30,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'10mm Rebar (slab mesh)',qty:60,unit:'pcs',up:155},
+    {name:'Electrical conduit 2-inch',qty:20,unit:'pcs',up:200},
+    {name:'PVC pipes & sanitary fittings',qty:1,unit:'lot',up:8000},
+    {name:'Floor drains & P-traps',qty:6,unit:'pcs',up:350},
+   ]},
+  {id:'gf-6',floor:'gf',name:'Foundation Part 2 — Left Side Footings, Tie Beams & Column Starters',
+   items:[
+    {name:'Gravel (foundation bedding)',qty:4,unit:'truck',up:3500},
+    {name:'Sand',qty:2,unit:'truck',up:3000},
+    {name:'Cement',qty:80,unit:'sack',up:220},
+    {name:'16mm Rebar (footings & column starters)',qty:100,unit:'pcs',up:355},
+    {name:'10mm Rebar (stirrups & tie beams)',qty:60,unit:'pcs',up:155},
+    {name:'Coco Lumber (formworks)',qty:60,unit:'pcs',up:160},
+    {name:'Plywood (formwork sheathing)',qty:10,unit:'sheets',up:680},
+    {name:'G.I. Tie Wire',qty:5,unit:'rolls',up:400},
+    {name:'Nails (assorted)',qty:3,unit:'kg',up:120},
+   ]},
+  {id:'gf-7',floor:'gf',name:'Left Side Column & Compaction + Stairs Footing & Columns',
+   items:[
+    {name:'16mm Rebar (columns + stair starters)',qty:90,unit:'pcs',up:355},
+    {name:'10mm Rebar (column ties)',qty:40,unit:'pcs',up:155},
+    {name:'Cement',qty:60,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'CHB 4-inch (early CHB)',qty:200,unit:'pcs',up:18},
+    {name:'Coco Lumber',qty:40,unit:'pcs',up:160},
+    {name:'Plywood',qty:6,unit:'sheets',up:680},
+   ]},
+  {id:'gf-8',floor:'gf',name:'Left GF Slab Pour — EPS Prep',
+   items:[
+    {name:'Cement (slab)',qty:30,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'10mm Rebar (slab mesh)',qty:60,unit:'pcs',up:155},
+    {name:'Electrical conduit 2-inch',qty:20,unit:'pcs',up:200},
+    {name:'PVC pipes & sanitary fittings',qty:1,unit:'lot',up:8000},
+    {name:'Floor drains & P-traps',qty:6,unit:'pcs',up:350},
+   ]},
+  {id:'gf-9',floor:'gf',name:'2F Beams Installation',
+   items:[
+    {name:'16mm Rebar (beam main bars)',qty:80,unit:'pcs',up:355},
+    {name:'10mm Rebar (beam stirrups)',qty:50,unit:'pcs',up:155},
+    {name:'Coco Lumber (beam formwork)',qty:60,unit:'pcs',up:160},
+    {name:'Plywood',qty:8,unit:'sheets',up:680},
+    {name:'G.I. Tie Wire',qty:3,unit:'rolls',up:400},
+   ]},
+  {id:'gf-10',floor:'gf',name:'GF Formworks Removal, CHB Wall Partition & Door/Window Frames',
+   items:[
+    {name:'CHB 4-inch (wall partition)',qty:600,unit:'pcs',up:18},
+    {name:'Cement (CHB mortar)',qty:30,unit:'sack',up:220},
+    {name:'Sand (CHB mortar)',qty:1,unit:'truck',up:3000},
+    {name:'Door frames (pre-fab wood)',qty:4,unit:'sets',up:3500},
+    {name:'Window frames',qty:6,unit:'sets',up:4000},
+    {name:'Miscellaneous hardware',qty:1,unit:'lot',up:5000},
+   ]},
+  {id:'gf-11',floor:'gf',name:'Finishing GF — Plaster, Wire, Tile, Paint & Fixtures',
+   items:[
+    {name:'Skimcoat / plaster (40kg bag)',qty:30,unit:'bags',up:320},
+    {name:'Ceramic floor tiles 60x60',qty:90,unit:'sqm',up:250},
+    {name:'Tile adhesive',qty:20,unit:'bags',up:280},
+    {name:'Tile grout',qty:10,unit:'bags',up:180},
+    {name:'Interior latex paint 4L',qty:10,unit:'gal',up:650},
+    {name:'Kitchen sink set',qty:1,unit:'set',up:4500},
+    {name:'Toilet & bidet set',qty:1,unit:'set',up:5000},
+    {name:'Electrical fittings, switches & lighting',qty:1,unit:'lot',up:12000},
+    {name:'Miscellaneous',qty:1,unit:'lot',up:5000},
+   ]},
+
+  // 2F
+  {id:'2f-1',floor:'2f',name:'2F Beams Installation — B-1/B-2/B-3/B-4/CB-1 (200x400mm, Grade 40)',
+   items:[
+    {name:'16mm Rebar — beam main bars (USER ACTUAL from plans)',qty:160,unit:'pcs',up:355},
+    {name:'10mm Rebar — beam stirrups (USER ACTUAL from plans)',qty:100,unit:'pcs',up:155},
+    {name:'G.I. Tie Wire',qty:5,unit:'rolls',up:400},
+   ]},
+  {id:'2f-1b',floor:'2f',name:'2F Slab Formworks — 2x3x10 Coco Lumber (USER ACTUAL)',
+   items:[
+    {name:'Coco Lumber 2x3x10 — slab deck formwork (USER ACTUAL)',qty:300,unit:'pcs',up:160},
+    {name:'Plywood (deck sheathing)',qty:20,unit:'sheets',up:680},
+    {name:'Nails (assorted)',qty:5,unit:'kg',up:120},
+   ]},
+  {id:'2f-2',floor:'2f',name:'Additional Slab Steel and EPS',
+   items:[
+    {name:'10mm Rebar (additional slab mesh)',qty:100,unit:'pcs',up:155},
+    {name:'16mm Rebar (additional)',qty:40,unit:'pcs',up:355},
+    {name:'Electrical conduit & fittings',qty:1,unit:'lot',up:10000},
+    {name:'G.I. Tie Wire',qty:3,unit:'rolls',up:400},
+   ]},
+  {id:'2f-3',floor:'2f',name:'2F Slab READY-MIX Pour and Curing (4000psi)',
+   items:[
+    {name:'Ready Mix Concrete 4000psi',qty:1,unit:'slab lot',up:200000},
+    {name:'Curing compound',qty:2,unit:'gal',up:800},
+   ]},
+  {id:'2f-4',floor:'2f',name:'2F Column Rebars and Early CHB — CHB, Sand, Cement, Dowels',
+   items:[
+    {name:'16mm Rebar (column verticals)',qty:60,unit:'pcs',up:355},
+    {name:'10mm Rebar (column ties / dowels)',qty:40,unit:'pcs',up:155},
+    {name:'CHB 4-inch',qty:200,unit:'pcs',up:18},
+    {name:'Cement (CHB mortar & grouting)',qty:25,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'G.I. Tie Wire',qty:2,unit:'rolls',up:400},
+   ]},
+  {id:'2f-5',floor:'2f',name:'2F Column Concreting',
+   items:[
+    {name:'Cement',qty:30,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'Coco Lumber (column forms)',qty:20,unit:'pcs',up:160},
+    {name:'Plywood',qty:4,unit:'sheets',up:680},
+   ]},
+  {id:'2f-6',floor:'2f',name:'2F CHB Wall Partition + EPS Rough-ins (elec/plumb/sanitary)',
+   items:[
+    {name:'CHB 4-inch (wall partition)',qty:500,unit:'pcs',up:18},
+    {name:'Cement (CHB mortar)',qty:25,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Electrical conduit & boxes',qty:1,unit:'lot',up:8000},
+    {name:'PVC sanitary pipes',qty:1,unit:'lot',up:6000},
+    {name:'G.I. Tie Wire',qty:2,unit:'rolls',up:400},
+   ]},
+  {id:'2f-7',floor:'2f',name:'2F Formworks Removal, Interior — Doors & Windows, CHB',
+   items:[
+    {name:'Door (pre-hung panel)',qty:3,unit:'sets',up:7000},
+    {name:'Window (aluminum sliding)',qty:4,unit:'sets',up:8000},
+    {name:'CHB 4-inch (remaining partition)',qty:200,unit:'pcs',up:18},
+    {name:'Cement (mortar)',qty:15,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Miscellaneous hardware',qty:1,unit:'lot',up:5000},
+   ]},
+  {id:'2f-8',floor:'2f',name:'Finishing 2F — Plaster, Tile, Paint & Fixtures',
+   items:[
+    {name:'Skimcoat / plaster (40kg bag)',qty:30,unit:'bags',up:320},
+    {name:'Ceramic floor tiles 60x60',qty:90,unit:'sqm',up:250},
+    {name:'Tile adhesive',qty:20,unit:'bags',up:280},
+    {name:'Tile grout',qty:10,unit:'bags',up:180},
+    {name:'Interior latex paint 4L',qty:8,unit:'gal',up:650},
+    {name:'Kitchen sink set',qty:1,unit:'set',up:4500},
+    {name:'Toilet & bidet set',qty:1,unit:'set',up:5000},
+    {name:'Electrical fittings, switches & lighting',qty:1,unit:'lot',up:10000},
+    {name:'Miscellaneous',qty:1,unit:'lot',up:4000},
+   ]},
+
+  // 3F
+  {id:'3f-1',floor:'3f',name:'3F Beams Installation and Formworks',
+   items:[
+    {name:'16mm Rebar (beam main bars)',qty:80,unit:'pcs',up:355},
+    {name:'10mm Rebar (beam stirrups)',qty:50,unit:'pcs',up:155},
+    {name:'Coco Lumber (beam + slab formwork)',qty:80,unit:'pcs',up:160},
+    {name:'Plywood (deck sheathing)',qty:15,unit:'sheets',up:680},
+    {name:'G.I. Tie Wire',qty:3,unit:'rolls',up:400},
+   ]},
+  {id:'3f-2',floor:'3f',name:'3F Stairs & Slab Pre-Pour — Slab/Stair Steel, Column Steel, EPS, Formworks',
+   items:[
+    {name:'16mm Rebar (3F column starters)',qty:80,unit:'pcs',up:355},
+    {name:'10mm Rebar (slab mesh)',qty:80,unit:'pcs',up:155},
+    {name:'10mm Rebar (stair bars)',qty:30,unit:'pcs',up:155},
+    {name:'Coco Lumber (slab formwork)',qty:80,unit:'pcs',up:160},
+    {name:'Plywood (deck sheathing)',qty:15,unit:'sheets',up:680},
+    {name:'Electrical conduit 2-inch',qty:20,unit:'pcs',up:200},
+    {name:'PVC pipes & fittings',qty:1,unit:'lot',up:8000},
+    {name:'G.I. Tie Wire',qty:4,unit:'rolls',up:400},
+   ]},
+  {id:'3f-3',floor:'3f',name:'3F Slab READY-MIX Pour and Curing (4000psi)',
+   items:[
+    {name:'Ready Mix Concrete 4000psi',qty:1,unit:'slab lot',up:200000},
+    {name:'Curing compound',qty:2,unit:'gal',up:800},
+   ]},
+  {id:'3f-4',floor:'3f',name:'3F Column Rebars and Early CHB — CHB, Sand, Cement',
+   items:[
+    {name:'16mm Rebar (column verticals)',qty:60,unit:'pcs',up:355},
+    {name:'10mm Rebar (column ties / dowels)',qty:40,unit:'pcs',up:155},
+    {name:'CHB 4-inch',qty:200,unit:'pcs',up:18},
+    {name:'Cement',qty:25,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'G.I. Tie Wire',qty:2,unit:'rolls',up:400},
+   ]},
+  {id:'3f-5',floor:'3f',name:'3F Column Concreting',
+   items:[
+    {name:'Cement',qty:35,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel',qty:1,unit:'truck',up:3500},
+    {name:'Coco Lumber (column forms)',qty:20,unit:'pcs',up:160},
+    {name:'Plywood',qty:4,unit:'sheets',up:680},
+   ]},
+  {id:'3f-6',floor:'3f',name:'3F CHB Wall Partition + EPS Rough-ins',
+   items:[
+    {name:'CHB 4-inch (wall partition)',qty:500,unit:'pcs',up:18},
+    {name:'Cement (CHB mortar)',qty:25,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Electrical conduit & boxes',qty:1,unit:'lot',up:8000},
+    {name:'PVC sanitary pipes',qty:1,unit:'lot',up:6000},
+    {name:'G.I. Tie Wire',qty:2,unit:'rolls',up:400},
+   ]},
+  {id:'3f-7',floor:'3f',name:'3F Formworks Removal, Interior — Doors & Windows, CHB',
+   items:[
+    {name:'Door (pre-hung panel)',qty:3,unit:'sets',up:7000},
+    {name:'Window (aluminum sliding)',qty:4,unit:'sets',up:8000},
+    {name:'CHB 4-inch (remaining partition)',qty:200,unit:'pcs',up:18},
+    {name:'Cement (mortar)',qty:15,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Miscellaneous hardware',qty:1,unit:'lot',up:5000},
+   ]},
+  {id:'3f-8',floor:'3f',name:'Finishing 3F — Plaster, Tile, Paint & Fixtures',
+   items:[
+    {name:'Skimcoat / plaster (40kg bag)',qty:30,unit:'bags',up:320},
+    {name:'Ceramic floor tiles 60x60',qty:90,unit:'sqm',up:250},
+    {name:'Tile adhesive',qty:20,unit:'bags',up:280},
+    {name:'Tile grout',qty:10,unit:'bags',up:180},
+    {name:'Interior latex paint 4L',qty:8,unit:'gal',up:650},
+    {name:'Kitchen sink set',qty:1,unit:'set',up:4500},
+    {name:'Toilet & bidet set',qty:1,unit:'set',up:5000},
+    {name:'Electrical fittings, switches & lighting',qty:1,unit:'lot',up:10000},
+    {name:'Miscellaneous',qty:1,unit:'lot',up:4000},
+   ]},
+
+  // ROOF DECK
+  {id:'rd-1',floor:'rd',name:'Roof Beams — RB-01/TB-01 (200x300mm) + Roof Framing Plan',
+   items:[
+    {name:'16mm Rebar (RB-01 roof beam main bars)',qty:100,unit:'pcs',up:355},
+    {name:'10mm Rebar (RB-01 beam stirrups type A)',qty:60,unit:'pcs',up:155},
+    {name:'Coco Lumber (beam + slab formwork)',qty:80,unit:'pcs',up:160},
+    {name:'Plywood (deck sheathing)',qty:15,unit:'sheets',up:680},
+    {name:'G.I. Tie Wire',qty:3,unit:'rolls',up:400},
+   ]},
+  {id:'rd-2',floor:'rd',name:'Steel Roof Truss — L50x50x5mm + L25x25x5mm Angle Bars',
+   items:[
+    {name:'L50x50x5mm angle bar (top chord + bottom chord)',qty:40,unit:'pcs',up:900},
+    {name:'L25x25x5mm angle bar (web members, vertical + diagonal)',qty:20,unit:'pcs',up:500},
+    {name:'Shelf angle 2"x2"x3/16" (wall connection)',qty:10,unit:'pcs',up:600},
+    {name:'Welding rod E60/E70',qty:10,unit:'boxes',up:600},
+    {name:'Metal primer',qty:6,unit:'gal',up:650},
+   ]},
+  {id:'rd-3',floor:'rd',name:'C-Purlins 2x4x1.2mm @ 600mm OC + G.I. Rib-type Roofing GA26',
+   items:[
+    {name:'C-purlins 2"x4"x1.2mm (@ 600mm OC both ways)',qty:1,unit:'lot',up:25000},
+    {name:'G.I. Rib-type Roofing GA26 pre-painted (roof + canopy)',qty:1,unit:'lot',up:55000},
+    {name:'10mm single-sided insulation',qty:1,unit:'lot',up:12000},
+    {name:'3/4" C-section fascia board',qty:1,unit:'lot',up:8000},
+    {name:'3" pipe downspout + Spanish gutter',qty:1,unit:'lot',up:12000},
+    {name:'Tek screws (box)',qty:5,unit:'boxes',up:450},
+   ]},
+  {id:'rd-4',floor:'rd',name:'CHB Parapet Fencing (RL01) + Septic Tank (5.0m×1.5m)',
+   items:[
+    {name:'CHB 6-inch (RL01 parapet / firewall fencing)',qty:300,unit:'pcs',up:22},
+    {name:'Cement (parapet mortar + septic tank)',qty:30,unit:'sack',up:220},
+    {name:'Sand',qty:1,unit:'truck',up:3000},
+    {name:'Gravel (septic tank)',qty:1,unit:'truck',up:3500},
+    {name:'12mm Rebar (septic tank walls EW)',qty:30,unit:'pcs',up:355},
+    {name:'10mm Rebar (dowels + distribution bars)',qty:20,unit:'pcs',up:155},
+    {name:'uPVC pipe (septic tank inlet/outlet)',qty:1,unit:'lot',up:5000},
+   ]},
+  {id:'rd-5',floor:'rd',name:'Stair Railings — RL01 CHB, RL02/RL03 Tubular Steel, Concrete Canopy',
+   items:[
+    {name:'25x25 tubular steel RL03 (stair railing in paint finish)',qty:30,unit:'pcs',up:700},
+    {name:'50x10 flat bar (balusters RL03)',qty:20,unit:'pcs',up:400},
+    {name:'100mm CHB railing RL01 in plaster finish',qty:120,unit:'pcs',up:22},
+    {name:'Concrete canopy (RF02) — cement + rebar',qty:1,unit:'lot',up:25000},
+    {name:'Welding rod',qty:3,unit:'boxes',up:600},
+    {name:'Enamel paint (outdoor, railing)',qty:4,unit:'gal',up:700},
+   ]},
+  {id:'rd-6',floor:'rd',name:'RD Waterproofing + Exterior Finishing',
+   items:[
+    {name:'Waterproofing membrane (torch-applied)',qty:1,unit:'lot',up:60000},
+    {name:'Waterproofing cement coating',qty:20,unit:'bags',up:850},
+    {name:'Primer / bonding agent',qty:4,unit:'gal',up:900},
+    {name:'Elastomeric paint (exterior) 4L',qty:15,unit:'gal',up:1200},
+    {name:'Hallway tiles 60x60 (exterior)',qty:30,unit:'sqm',up:250},
+    {name:'Skimcoat / plaster (exterior firewall)',qty:20,unit:'bags',up:320},
+   ]},
+  {id:'rd-7',floor:'rd',name:'Fire Sprinkler System (FDAS) — P5 Sprinkler Layout All Floors',
+   items:[
+    {name:'Fire sprinkler water reservoir (rooftop)',qty:1,unit:'lot',up:35000},
+    {name:'Steel pipe riser (FDAS main)',qty:1,unit:'lot',up:15000},
+    {name:'Sidewall sprinkler heads (SP, all floors)',qty:1,unit:'lot',up:15000},
+   ]},
+  {id:'rd-8',floor:'rd',name:'Electrical — MDP + PB-A to PB-G (7 Sub-panels), THHN Wiring',
+   items:[
+    {name:'Main Distribution Panel (MDP) 230V 1Ø 3W 60Hz',qty:1,unit:'set',up:25000},
+    {name:'Sub-panel PB-A (Unit 1 GF) — 10 circuits',qty:1,unit:'set',up:8000},
+    {name:'Sub-panel PB-B (Unit 2 GF) — 10 circuits',qty:1,unit:'set',up:8000},
+    {name:'Sub-panels PB-C,D,E (2F-3F units) — per E6 schedule',qty:3,unit:'sets',up:7000},
+    {name:'22mm² THHN wire (feeder) + 8mm² TW (branch)',qty:1,unit:'lot',up:25000},
+    {name:'30mm Ø RSC/PVC conduit pipe (per E-plans)',qty:1,unit:'lot',up:18000},
+    {name:'Copper-clad steel ground rod 16mmx300mm',qty:2,unit:'pcs',up:1500},
+    {name:'Outlets, switches, pin lights, downlights (per E1-E2)',qty:1,unit:'lot',up:35000},
+   ]},
+  {id:'rd-9',floor:'rd',name:'Plumbing — Water Line (GI), Sewer (4" PVC), Storm Drain, P1-P5',
+   items:[
+    {name:'GI pipe water supply (main + sub-meters per unit)',qty:1,unit:'lot',up:30000},
+    {name:'Water tank (rooftop) + pump motor',qty:1,unit:'set',up:18000},
+    {name:'4" PVC soil pipe riser (sewer line per P2)',qty:1,unit:'lot',up:18000},
+    {name:'PVC fittings — wye, elbow, tee, reducer (per P4 isometric)',qty:1,unit:'lot',up:12000},
+    {name:'Catch basin + storm drain (per P3)',qty:2,unit:'sets',up:5000},
+    {name:'Floor drains FD + clean-out CO + grease trap (per P5)',qty:1,unit:'lot',up:8000},
+    {name:'Water closet WC (7 units)',qty:7,unit:'sets',up:5000},
+    {name:'Lavatory LAV (7 units)',qty:7,unit:'sets',up:3500},
+    {name:'Shower head SH + gate valve BV (7 units)',qty:7,unit:'sets',up:1500},
+    {name:'Kitchen sink KS stainless (7 units)',qty:7,unit:'sets',up:4500},
+    {name:'Gate valves + check valves (per P1 water line)',qty:1,unit:'lot',up:8000},
+   ]},
+];
+
+// ── OVERVIEW DATA — Corrected & Verified Estimate
+// 3-Storey + Slab Roof · Basis: Plans A1-A6,S1-S6,E1-E6,P1-P5,EE1
+// Prices: Gravel ₱3,500/T · Sand ₱3,000/T · Cement ₱220/sk · 16mm ₱355/pc · 10mm ₱155/pc · Coco ₱160/pc · Ply ₱680/sheet · RM ₱200,000/slab
+// Corrections: actual footing volumes · GF-level beams S2 · 3 RM pours · full exterior plaster 600sqm · cabinetry A4 · 5% contingency
+const floors=[
+  {id:'gf',label:'Ground Floor',short:'GF',
+   materials:[
+    {desc:'Gravel 9 trucks — 50mm compacted base + footing concrete + column aggregate',tags:[],amt:31500},
+    {desc:'Sand 7 trucks — foundation + column + GF slab aggregate',tags:[],amt:21000},
+    {desc:'Cement 373 sacks — F1-F5 footings(129sk)+FTB-01(38sk)+GF cols(38sk)+GF slab(74sk)+stairs(18sk)+CHB mortar(40sk)+misc(36sk)',tags:[],amt:82060},
+    {desc:'16mm Rebar 232 pcs — footings F1(4×12EW)+F2(2×8EW)+F3(3×12EW)+F4(2×6EW)+F5(1×4EW) per S3 schedule',tags:['st'],amt:82360},
+    {desc:'16mm Rebar 40 pcs — FTB-01 tie beams 200×300mm (2-16mm top+bottom all positions)',tags:['st'],amt:14200},
+    {desc:'10mm Rebar 30 pcs — FTB-01 stirrups type A + footing distribution bars',tags:['st'],amt:4650},
+    {desc:'16mm Rebar 120 pcs — GF-level beams B-01/B-02/CB-01 at GF slab level (S2 framing plan — previously missing)',tags:['st'],amt:42600},
+    {desc:'10mm Rebar 80 pcs — GF-level beam stirrups type A',tags:['st'],amt:12400},
+    {desc:'16mm Rebar 88 pcs — GF columns C1(6×8=48)+C2(4×6=24)+C3(2×8=16) per S3 column schedule',tags:['st'],amt:31240},
+    {desc:'10mm Rebar 200 pcs — GF column ties C1/C3@200mm(120pcs)+C2@150mm(80pcs) per S3',tags:['st'],amt:31000},
+    {desc:'10mm Rebar 188 pcs — GF slab-on-grade S2 two-way @300mm EW (manual mix NOT ready mix)',tags:['st'],amt:29140},
+    {desc:'Coco Lumber 60 pcs + Plywood 12 sheets — footing/column/GF-beam formwork',tags:['fw'],amt:17760},
+    {desc:'GI Tie Wire 8 rolls + PVC conduit 2" RSC + floor drains FD + EPS rough-in sleeves',tags:[],amt:8200},
+    {desc:'16mm Rebar 35 pcs + 10mm 25 pcs + Cement 15 sacks — GF-2F stair per S5 detail',tags:['st'],amt:20800},
+    {desc:'16mm Rebar 160 pcs — 2F beams B1-B4/CB-1 (200×400mm) main bars [ACTUAL confirmed]',tags:['st'],amt:56800},
+    {desc:'10mm Rebar 100 pcs — 2F beam stirrups type A: 2@50,3@75,4@100,rest@150mm [ACTUAL confirmed]',tags:['st'],amt:15500},
+    {desc:'CHB 125mm 1500 pcs — GF partition + exterior walls (10mm vert@800mm OC per S1)',tags:[],amt:27000},
+    {desc:'Sand 1 truck — GF CHB mortar',tags:[],amt:3000},
+    {desc:'Door D01×2 solid wood + D02×4 hollow wood + D03×2 PVC — GF per A4 schedule',tags:[],amt:54000},
+    {desc:'Window W01×2 jalousie + W02×2 + W03×2 sliding alum — GF per A4 schedule',tags:[],amt:29000},
+    {desc:'EPS GF rough-in — 30mm RSC conduit + junction boxes + PVC sanitary pipes',tags:[],amt:12000},
+    {desc:'FF01 60×60 glossy white — GF living/kitchen (50 sqm)',tags:[],amt:14000},
+    {desc:'FF03 30×30 rustic white T&B (20sqm) + WF02 30×30 wall tiles (30sqm) — GF',tags:[],amt:11000},
+    {desc:'Skimcoat WF01 35 bags + tile adhesive 25 bags + grout + latex paint 10 gal — GF interior',tags:[],amt:23450},
+    {desc:'KS kitchen sink×2 + faucet + concrete counter + hanging shelves per A4 kitchen detail',tags:[],amt:26000},
+    {desc:'WC+LAV+Shower+BV fixtures — GF T&B (2 sets)',tags:[],amt:16000},
+    {desc:'Cabinetry + wood shelving per A4 kitchen section detail — GF units (2 units)',tags:[],amt:16000},
+    {desc:'Electrical fixtures GF — switches, outlets, downlights, pinlights per E1-E2',tags:[],amt:18000},
+    {desc:'Miscellaneous consumables — nails, form oil, concrete spacers, GI wire, temp works',tags:[],amt:15000},
+   ],
+   labor:[
+    {desc:'Mobilization + Downpayment allowance (1 cycle)',cycles:1,amt:32000},
+    {desc:'Demolition, Hauling, Excavation, Soil Poisoning (2 cycles)',cycles:2,amt:64000},
+    {desc:'Foundation Part 1 — Right footings + FTB-01 + GF beams + col starters (3 cycles)',cycles:3,amt:96000},
+    {desc:'Right Column + Compaction (2 cycles)',cycles:2,amt:64000},
+    {desc:'Right GF Slab Pour + EPS Prep (3 cycles)',cycles:3,amt:96000},
+    {desc:'Foundation Part 2 — Left footings + FTB-01 + GF beams + col starters (2 cycles)',cycles:2,amt:64000},
+    {desc:'Left Column + Compaction + Stair Footing/Columns (2 cycles)',cycles:2,amt:68000},
+    {desc:'Left GF Slab Pour + EPS Prep (2 cycles)',cycles:2,amt:68000},
+    {desc:'2F Beams Installation (1 cycle)',cycles:1,amt:34000},
+    {desc:'GF CHB Partition + Formwork Removal + Doors/Windows (1 cycle)',cycles:1,amt:34000},
+   ]},
+  {id:'2f',label:'2nd Floor',short:'2F',
+   materials:[
+    {desc:'Coco Lumber 2x3x10 300 pcs — 2F slab formwork [ACTUAL]',tags:['fw'],amt:48000},
+    {desc:'Plywood 20 sheets — 2F slab deck sheathing',tags:['fw'],amt:13600},
+    {desc:'10mm Rebar 188 pcs — 2F slab S2 two-way reinforcing @150/300mm EW',tags:['st'],amt:29140},
+    {desc:'16mm Rebar 88 pcs — 2F column starters C1/C2/C3 (12 cols)',tags:['st'],amt:31240},
+    {desc:'Ready Mix Concrete 4000psi / 21.70 MPa — 2F slab pour [USER CONFIRMED]',tags:['rm'],amt:200000},
+    {desc:'16mm Rebar 88 pcs — 2F columns full height C1(6×8)+C2(4×6)+C3(2×8)',tags:['st'],amt:31240},
+    {desc:'10mm Rebar 200 pcs — 2F column ties C1/C3@200mm + C2@150mm',tags:['st'],amt:31000},
+    {desc:'Gravel 1T + Sand 1T + Cement 36 sacks — 2F column concrete (21.70 MPa)',tags:[],amt:18420},
+    {desc:'16mm Rebar 160 pcs — 3F beams B1-B4 (200×400mm) main bars [ACTUAL]',tags:['st'],amt:56800},
+    {desc:'10mm Rebar 100 pcs — 3F beam stirrups type A [ACTUAL]',tags:['st'],amt:15500},
+    {desc:'16mm Rebar 35 pcs + 10mm 25 pcs + Cement 15 sacks — 2F-3F stair per S5',tags:['st'],amt:20800},
+    {desc:'CHB 125mm 1200 pcs — 2F partition walls (10mm vert@800mm OC)',tags:[],amt:21600},
+    {desc:'Cement 30 sacks + Sand 1 truck — 2F CHB mortar',tags:[],amt:9600},
+    {desc:'Door D01×1 + D02×4 + D03×2 — 2F per A4 schedule',tags:[],amt:31500},
+    {desc:'Window W02×3 + W03×2 + W04×2 sliding alum — 2F per A4 schedule',tags:[],amt:46000},
+    {desc:'EPS 2F rough-in — electrical conduit + PVC sanitary tie-ins to risers',tags:[],amt:12000},
+    {desc:'FF01 60×60 glossy (50sqm) + FF02 60×60 wood-look (30sqm) — 2F floors',tags:[],amt:22700},
+    {desc:'FF03 30×30 rustic (20sqm) + WF02 30×30 wall tiles (30sqm) — 2F T&B',tags:[],amt:11000},
+    {desc:'Skimcoat WF01 30 bags + tile adhesive 25 bags + grout + latex paint 10 gal — 2F',tags:[],amt:21850},
+    {desc:'KS kitchen sink×2 + faucet + concrete counter + hanging shelves per A4 — 2F',tags:[],amt:26000},
+    {desc:'WC+LAV+Shower+BV fixtures — 2F T&B (2 sets)',tags:[],amt:16000},
+    {desc:'Cabinetry + wood shelving per A4 kitchen section detail — 2F units (2 units)',tags:[],amt:24000},
+    {desc:'Electrical fixtures 2F — switches, outlets, pinlights, downlights per E1-E2',tags:[],amt:14000},
+    {desc:'Miscellaneous consumables 2F — nails, form oil, spacers, tie wire',tags:[],amt:8000},
+   ],
+   labor:[
+    {desc:'2F Slab Pre-Pour — formwork, col starters, rebar, EPS (2 cycles)',cycles:2,amt:68000},
+    {desc:'2F Ready Mix Pour + Curing (1 cycle)',cycles:1,amt:34000},
+    {desc:'2F Columns + Early CHB (2 cycles)',cycles:2,amt:68000},
+    {desc:'3F Beams Installation (1 cycle)',cycles:1,amt:34000},
+    {desc:'2F-3F Stairs + 2F CHB partition (1 cycle)',cycles:1,amt:34000},
+    {desc:'GF Formwork Removal + GF Interior Doors/Windows (1 cycle)',cycles:1,amt:34000},
+    {desc:'GF Finishing — Tile, Plaster, Paint, Kitchen, Cabinetry, Fixtures (1 cycle)',cycles:1,amt:34000},
+   ]},
+  {id:'3f',label:'3rd Floor',short:'3F',
+   materials:[
+    {desc:'Coco Lumber 2x3x10 300 pcs — 3F slab formwork [ACTUAL]',tags:['fw'],amt:48000},
+    {desc:'Plywood 20 sheets — 3F slab deck',tags:['fw'],amt:13600},
+    {desc:'10mm Rebar 188 pcs — 3F slab S2 two-way @150/300mm EW',tags:['st'],amt:29140},
+    {desc:'16mm Rebar 88 pcs — 3F column starters (12 cols)',tags:['st'],amt:31240},
+    {desc:'Ready Mix Concrete 4000psi / 21.70 MPa — 3F slab pour [USER CONFIRMED]',tags:['rm'],amt:200000},
+    {desc:'16mm Rebar 88 pcs — 3F columns full height',tags:['st'],amt:31240},
+    {desc:'10mm Rebar 200 pcs — 3F column ties',tags:['st'],amt:31000},
+    {desc:'Gravel 1T + Sand 1T + Cement 36 sacks — 3F column concrete',tags:[],amt:18420},
+    {desc:'16mm Rebar 35 pcs + 10mm 25 pcs + Cement 15 sacks — 3F-RD stair per S5',tags:['st'],amt:20800},
+    {desc:'CHB 125mm 1200 pcs — 3F partition walls',tags:[],amt:21600},
+    {desc:'Cement 30 sacks + Sand 1 truck — 3F CHB mortar',tags:[],amt:9600},
+    {desc:'Door D01×2 + D02×4 + D03×2 — 3F per A4 schedule',tags:[],amt:40500},
+    {desc:'Window W02×3 + W03×2 + W04×2 — 3F per A4 schedule',tags:[],amt:46000},
+    {desc:'EPS 3F rough-in — electrical conduit + PVC sanitary pipes',tags:[],amt:12000},
+    {desc:'FF01 60×60 glossy (50sqm) + FF02 60×60 wood-look (30sqm) — 3F floors',tags:[],amt:22700},
+    {desc:'FF03 30×30 rustic (20sqm) + WF02 30×30 wall tiles (30sqm) — 3F T&B',tags:[],amt:11000},
+    {desc:'Skimcoat WF01 30 bags + tile adhesive 25 bags + grout + latex paint 10 gal — 3F',tags:[],amt:21850},
+    {desc:'KS kitchen sink×2 + concrete counter + hanging shelves per A4 — 3F',tags:[],amt:26000},
+    {desc:'WC+LAV+Shower+BV fixtures — 3F T&B (2 sets)',tags:[],amt:16000},
+    {desc:'Cabinetry + wood shelving per A4 kitchen section — 3F units (2 units)',tags:[],amt:24000},
+    {desc:'Electrical fixtures 3F — switches, outlets, pinlights per E1-E2',tags:[],amt:14000},
+    {desc:'Miscellaneous consumables 3F',tags:[],amt:8000},
+   ],
+   labor:[
+    {desc:'3F Slab Pre-Pour — formwork, col starters, rebar, EPS (2 cycles)',cycles:2,amt:68000},
+    {desc:'3F Ready Mix Pour + Curing (1 cycle)',cycles:1,amt:34000},
+    {desc:'3F Columns + Early CHB (2 cycles)',cycles:2,amt:68000},
+    {desc:'Roof Beams RB-01 (200×300mm) + Slab Roof formwork + Pre-Pour prep (2 cycles)',cycles:2,amt:68000},
+    {desc:'3F-RD Stairs + 3F CHB partition (1 cycle)',cycles:1,amt:34000},
+    {desc:'2F Formwork Removal + 2F Interior Doors/Windows (1 cycle)',cycles:1,amt:34000},
+    {desc:'2F Finishing — Tile, Plaster, Paint, Kitchen, Cabinetry, Fixtures (1 cycle)',cycles:1,amt:34000},
+   ]},
+  {id:'rd',label:'Slab Roof / Roof Deck',short:'RD',
+   materials:[
+    {desc:'Coco Lumber 300 pcs — Slab Roof formwork (3rd concrete slab pour)',tags:['fw'],amt:48000},
+    {desc:'Plywood 20 sheets — Slab Roof deck sheathing',tags:['fw'],amt:13600},
+    {desc:'10mm Rebar 188 pcs — Slab Roof S2 @300mm EW reinforcing',tags:['st'],amt:29140},
+    {desc:'Ready Mix Concrete 4000psi — Slab Roof pour (roof deck = full reinforced concrete slab)',tags:['rm'],amt:200000},
+    {desc:'Steel Truss L50x50x5mm — top+bottom chord (40 pcs) per S5 truss detail',tags:['st'],amt:36000},
+    {desc:'Steel Truss web L25x25x5mm (20 pcs) + shelf angle 2×2×1/4" welded to CHB per S5',tags:['st'],amt:18000},
+    {desc:'C-purlins 2"×4"×1.2mm @600mm OC (30 pcs) per S5',tags:['st'],amt:19500},
+    {desc:'G.I. GA26 pre-painted rib-type (95 sqm) + 10mm insulation + Spanish gutter + 3" downspout',tags:[],amt:91250},
+    {desc:'Welding rod E60/E70 (10 boxes) + metal primer 6 gal — truss fabrication + painting',tags:[],amt:9900},
+    {desc:'CHB 150mm 6-inch 660 pcs — RD parapet fencing RL01 (43m perimeter × 1.2m ht per A3)',tags:[],amt:14520},
+    {desc:'Cement 40 sacks + 16mm dowels 20 pcs + Sand 1 truck — parapet mortar + waterproof screed',tags:[],amt:23820},
+    {desc:'25×25 tubular RL02/RL03 railings 30 pcs + 50×10 flat bar balusters 20 pcs per A5',tags:['st'],amt:29000},
+    {desc:'Concrete canopy RF02 — cement + 12mm rebar + formwork per A3 section',tags:[],amt:18000},
+    {desc:'Enamel paint 4 gal outdoor + welding consumables 3 boxes — railing finishing',tags:[],amt:4600},
+    {desc:'Septic Tank 5.0×1.5m: Gravel 2T+Sand 1T+Cement 80sk+12mm rebar 40pc+uPVC+manholes per P5',tags:[],amt:56700},
+    {desc:'Waterproofing membrane torch-applied — slab roof deck (92.5 sqm)',tags:[],amt:65000},
+    {desc:'Waterproofing cement coating 20 bags + primer/bonding agent',tags:[],amt:22000},
+    {desc:'Skimcoat WF01 75 bags — exterior firewall + all 4 facade sides (~600 sqm per A3 elevation)',tags:[],amt:24000},
+    {desc:'Elastomeric paint exterior grade 25 gal — all 4 facade sides 600 sqm (1 gal ≈ 24 sqm)',tags:[],amt:30000},
+    {desc:'Hallway/exterior tiles FF01 60×60 (25 sqm) + tile adhesive 10 bags',tags:[],amt:9800},
+    {desc:'MDP 230V 1-phase 3-wire 60Hz — Main Distribution Panel per E3 load schedule',tags:[],amt:30000},
+    {desc:'PB-A (GF Unit 1) + PB-B (GF Unit 2) — 2 sub-panels per E4-E5',tags:[],amt:17000},
+    {desc:'PB-C + PB-D (2F) + PB-E (3F) — 3 sub-panels per E6 typical (3-storey = 5 panels total)',tags:[],amt:22500},
+    {desc:'22mm² THHN feeder wire + 8mm² TW branch conductors all floors per E3',tags:[],amt:28000},
+    {desc:'30mm RSC conduit feeder runs + 16mm×300mm copper-clad ground rods (2 pcs) per E2',tags:[],amt:15000},
+    {desc:'Outlets, switches, pinlights, downlights balance all floors per E1-E2 layout',tags:[],amt:45000},
+    {desc:'GI pipe main water supply + gate valves + sub-meters per unit per P1',tags:[],amt:32000},
+    {desc:'Rooftop water tank + pump motor + PVC delivery pipes per P1',tags:[],amt:22000},
+    {desc:'4" PVC soil pipe risers + wye/elbow/tee/reducer fittings all floors per P2 isometric',tags:[],amt:55000},
+    {desc:'Catch basin + storm drain + 4" dia downspout pipe tie-ins per P3',tags:[],amt:12000},
+    {desc:'Floor drains FD + clean-out CO + grease trap + P-traps per P5',tags:[],amt:10000},
+    {desc:'FDAS fire sprinkler — rooftop reservoir + steel pipe risers + heads all floors per EE1',tags:[],amt:70000},
+    {desc:'Temporary water connection + curing water supply during construction (3-4 months)',tags:[],amt:15000},
+    {desc:'3F Formwork Removal + 3F Doors/Windows (D01×2+D02×4+D03×2+W02-W04 per A4)',tags:[],amt:38000},
+    {desc:'3F Finishing — FF01/FF02/FF03 tile+WF01 plaster+paint+KS+WC/LAV/SH+cabinetry+fixtures',tags:[],amt:65000},
+    {desc:'5% contingency buffer — material price variance + unforeseen site conditions (industry standard)',tags:[],amt:260262},
+   ],
+   labor:[
+    {desc:'Slab Roof Ready Mix Pour + Curing (1 cycle)',cycles:1,amt:34000},
+    {desc:'G.I. GA26 Roofing + 10mm Insulation + C-purlins installation (2 cycles)',cycles:2,amt:68000},
+    {desc:'CHB 6-inch Parapet + Septic Tank 5×1.5m + Railings RL01/RL02/RL03 (2 cycles)',cycles:2,amt:68000},
+    {desc:'Waterproofing torch-applied + Exterior plastering/painting all 4 facades (2 cycles)',cycles:2,amt:68000},
+    {desc:'Electrical MDP + PB-A to PB-E panels + full wiring finals (2 cycles)',cycles:2,amt:68000},
+    {desc:'Plumbing GI supply + 4" sewer + storm drain + FDAS + water tank (2 cycles)',cycles:2,amt:68000},
+    {desc:'3F Formwork Removal + 3F Interior Works Doors/Windows/Partition (1 cycle)',cycles:1,amt:34000},
+    {desc:'3F Finishing — Tile, Plaster, Paint, Kitchen, Cabinetry, Fixtures (1 cycle)',cycles:1,amt:34000},
+   ]},
+];
+
+
+floors.forEach(f=>{
+  f.matTotal=f.materials.reduce((s,r)=>s+r.amt,0);
+  f.labTotal=f.labor.reduce((s,r)=>s+r.amt,0);
+  f.total=f.matTotal+f.labTotal;
+  f.rmTotal=f.materials.filter(r=>r.tags.includes('rm')).reduce((s,r)=>s+r.amt,0);
+});
+const grandMat=floors.reduce((s,f)=>s+f.matTotal,0);
+const grandLab=floors.reduce((s,f)=>s+f.labTotal,0);
+const grand=grandMat+grandLab;
+const grandRM=floors.reduce((s,f)=>s+f.rmTotal,0);
+
+// ── HELPERS
+const p=n=>'&#8369;'+Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const praw=n=>'&#8369;'+Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pk=n=>n>=1e6?'&#8369;'+(n/1e6).toFixed(2)+'M':'&#8369;'+(n/1000).toFixed(0)+'K';
+const msTotal=ms=>ms.items.reduce((s,it)=>s+it.qty*it.up,0);
+const tagHTML=tags=>tags.map(t=>t==='rm'?'<span class="tag tag-rm">Ready Mix</span>':t==='st'?'<span class="tag tag-st">Steel</span>':t==='fw'?'<span class="tag tag-fw">Formwork</span>':'').join('');
+const UNITS=['pcs','sack','truck','sheets','bags','rolls','sqm','gal','set','sets','lot','slab lot','kg','m','L','boxes'];
+
+// ── OVERVIEW BUILD
+document.getElementById('kpi-grand').innerHTML=pk(grand);
+document.getElementById('kpi-mat').innerHTML=pk(grandMat);
+document.getElementById('kpi-lab').innerHTML=pk(grandLab);
+document.getElementById('kpi-rm').innerHTML=pk(grandRM);
+document.getElementById('kpi-mat-sub').textContent=(grandMat/grand*100).toFixed(0)+'% of total cost';
+document.getElementById('kpi-lab-sub').textContent=(grandLab/grand*100).toFixed(0)+'% of total cost';
+document.getElementById('kpi-mat-pct').textContent='Materials '+(grandMat/grand*100).toFixed(0)+'%';
+document.getElementById('kpi-lab-pct').textContent='Labor '+(grandLab/grand*100).toFixed(0)+'%';
+
+const maxT=Math.max(...floors.map(f=>f.total));
+const chartCard=document.getElementById('chartCard');
+floors.forEach(f=>{
+  const mw=(f.matTotal/maxT*100).toFixed(1),lw=(f.labTotal/maxT*100).toFixed(1);
+  const row=document.createElement('div');row.className='chart-row';
+  row.innerHTML=`<div><div class="chart-fl">${f.short}</div><div class="chart-fs">${f.label}</div></div>
+    <div class="bars">
+      <div class="bar-track"><div class="bar-fill mat" style="width:0" data-w="${mw}">${parseFloat(mw)>22?p(f.matTotal):''}</div></div>
+      <div class="bar-track"><div class="bar-fill lab" style="width:0" data-w="${lw}">${parseFloat(lw)>10?p(f.labTotal):''}</div></div>
+    </div>
+    <div><div class="chart-tot">${p(f.total)}</div><div class="chart-tot-s">floor total</div></div>`;
+  chartCard.appendChild(row);
+});
+setTimeout(()=>document.querySelectorAll('.bar-fill[data-w]').forEach(el=>el.style.width=el.dataset.w+'%'),80);
+
+const grid=document.getElementById('floorsGrid');
+floors.forEach((f,idx)=>{
+  const mp=(f.matTotal/f.total*100).toFixed(0),lp=(f.labTotal/f.total*100).toFixed(0);
+  const mR=f.materials.map(m=>`<tr><td>${m.desc}${tagHTML(m.tags)}</td><td class="r">${p(m.amt)}</td></tr>`).join('');
+  const lR=f.labor.map(l=>`<tr><td>${l.desc} <span style="color:var(--ink3);font-size:10px">${l.cycles} cycle${l.cycles!==1?'s':''}</span></td><td class="r">${p(l.amt)}</td></tr>`).join('');
+  const div=document.createElement('div');div.className='floor-card';
+  div.innerHTML=`<div class="fc-top"><div><div class="fc-id">${f.short} &middot; ${f.label.toUpperCase()}</div><div class="fc-name">${f.label}</div></div>
+    <div class="fc-tot-box"><div class="fc-tot-lbl">Floor Total</div><div class="fc-tot-val">${p(f.total)}</div></div></div>
+    <div class="fc-mid"><div class="split-bar"><div class="sb-mat" style="width:${mp}%"></div><div class="sb-lab" style="width:${lp}%"></div></div>
+    <div class="two-row">
+      <div class="cl"><div class="cl-left"><div class="cl-dot" style="background:var(--mat)"></div>Materials</div><div class="cl-right"><span class="cl-amt">${p(f.matTotal)}</span><span class="cl-pct">${mp}%</span></div></div>
+      <div class="cl"><div class="cl-left"><div class="cl-dot" style="background:var(--lab)"></div>Labor</div><div class="cl-right"><span class="cl-amt">${p(f.labTotal)}</span><span class="cl-pct">${lp}%</span></div></div>
+    </div></div>
+    <button class="expand-btn" id="ebtn-${idx}" onclick="toggleExpand(${idx})"><span class="expand-icon">&#9662;</span>&nbsp;&nbsp;View breakdown</button>
+    <div class="dp" id="dp-${idx}">
+      <div class="dtabs">
+        <button class="dtab active mat" id="dtm-${idx}" onclick="stab(${idx},'m')">Materials &middot; ${p(f.matTotal)}</button>
+        <button class="dtab lab" id="dtl-${idx}" onclick="stab(${idx},'l')">Labor &middot; ${p(f.labTotal)}</button>
+      </div>
+      <div class="dcontent">
+        <div id="dmc-${idx}"><table class="dtable"><thead><tr><th>Work Item / Material</th><th class="r">Amount</th></tr></thead>
+          <tbody>${mR}<tr class="sub-row"><td>Materials Subtotal</td><td class="r">${p(f.matTotal)}</td></tr></tbody></table></div>
+        <div id="dlc-${idx}" style="display:none"><table class="dtable"><thead><tr><th>Work Package</th><th class="r">Amount</th></tr></thead>
+          <tbody>${lR}<tr class="sub-row"><td>Labor Subtotal</td><td class="r">${p(f.labTotal)}</td></tr></tbody></table></div>
+      </div>
+    </div>`;
+  grid.appendChild(div);
+});
+function toggleExpand(i){
+  const dp=document.getElementById('dp-'+i),btn=document.getElementById('ebtn-'+i);
+  const open=dp.classList.toggle('open');
+  btn.querySelector('.expand-icon').style.transform=open?'rotate(180deg)':'';
+  btn.childNodes[2].nodeValue='\u00a0\u00a0'+(open?'Hide breakdown':'View breakdown');
+}
+function stab(i,t){
+  document.getElementById('dtm-'+i).classList.toggle('active',t==='m');
+  document.getElementById('dtl-'+i).classList.toggle('active',t==='l');
+  document.getElementById('dmc-'+i).style.display=t==='m'?'':'none';
+  document.getElementById('dlc-'+i).style.display=t==='l'?'':'none';
+}
+
+// ── FLOOR DETAIL
+const pillsEl=document.getElementById('floorPills');
+floors.forEach((f,i)=>{
+  const btn=document.createElement('button');
+  btn.className='fpill'+(i===0?' active':'');btn.textContent=f.label;
+  btn.onclick=()=>{document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFull(i);};
+  pillsEl.appendChild(btn);
+});
+function renderFull(i){
+  const f=floors[i];
+  const mp=(f.matTotal/f.total*100).toFixed(0),lp=(f.labTotal/f.total*100).toFixed(0);
+  const mR=f.materials.map(m=>`<tr><td>${m.desc}${tagHTML(m.tags)}</td><td class="r">${p(m.amt)}</td></tr>`).join('');
+  const lR=f.labor.map(l=>`<tr><td>${l.desc}<br><span style="color:var(--ink3);font-size:10px">${l.cycles} payroll cycle${l.cycles!==1?'s':''}</span></td><td class="r">${p(l.amt)}</td></tr>`).join('');
+  document.getElementById('fullDetail').innerHTML=`
+    <div class="fdc-hdr"><div><div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">${f.short}</div><div class="fdc-name">${f.label}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Floor Total</div><div class="fdc-tot">${p(f.total)}</div></div></div>
+    <div style="padding:12px 28px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:12px">
+      <div style="flex:1;height:10px;border-radius:5px;overflow:hidden;display:flex;background:var(--rule)">
+        <div style="width:${mp}%;background:var(--mat)"></div><div style="width:${lp}%;background:var(--lab)"></div></div>
+      <span style="font-size:11px;color:var(--mat);font-weight:600">Mat ${mp}%</span>
+      <span style="font-size:11px;color:var(--lab);font-weight:600">Labor ${lp}%</span>
+    </div>
+    <div class="fdc-body">
+      <div class="fdc-col"><div class="fdc-col-hdr"><span class="fdc-ct mat">Materials</span><span class="fdc-sub">${p(f.matTotal)}</span></div>
+        <table class="ftable"><thead><tr><th>Work Item</th><th class="r">Amount</th></tr></thead><tbody>${mR}</tbody></table></div>
+      <div class="fdc-col"><div class="fdc-col-hdr"><span class="fdc-ct lab">Labor</span><span class="fdc-sub">${p(f.labTotal)}</span></div>
+        <table class="ftable"><thead><tr><th>Work Package</th><th class="r">Amount</th></tr></thead><tbody>${lR}</tbody></table></div>
+    </div>
+    <div class="fdc-foot"><span style="font-size:12px;color:var(--ink3);font-weight:500">Floor Total</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:var(--mat)">${p(f.total)}</span></div>`;
+}
+renderFull(0);
+
+// ── MATERIAL BREAKDOWN
+function renderBreakdown(){
+  const filter=document.getElementById('floorFilter').value;
+  const list=document.getElementById('milestoneList');
+  list.innerHTML='';
+  const vis=filter==='all'?milestones:milestones.filter(m=>m.floor===filter);
+  vis.forEach(ms=>{
+    const color=FC[ms.floor];
+    const tot=msTotal(ms);
+    const card=document.createElement('div');card.className='milestone-card';card.id='mc-'+ms.id;
+    card.innerHTML=`
+      <div class="ms-hdr" onclick="toggleMs('${ms.id}')">
+        <div class="ms-floor-badge" style="background:${color}">${FL[ms.floor]}</div>
+        <div class="ms-title-area"><div class="ms-title">${ms.name}</div>
+          <div class="ms-subtitle">${ms.items.length} material item${ms.items.length!==1?'s':''}</div></div>
+        <div class="ms-right">
+          <span class="ms-tot-val" id="ms-tot-${ms.id}">${p(tot)}</span>
+          <span class="ms-count">${ms.items.length} items</span>
+          <span class="ms-chev${ms._open?' open':''}" id="ms-chev-${ms.id}">&#9662;</span>
+        </div>
+      </div>
+      <div class="ms-body${ms._open?' open':''}" id="ms-body-${ms.id}">
+        <div class="it-table-wrap">
+          <table class="it-table">
+            <thead><tr>
+              <th style="width:35%">Material / Item</th>
+              <th class="r" style="width:9%">Qty</th>
+              <th style="width:10%;text-align:center">Unit</th>
+              <th class="r" style="width:14%">Unit Price (&#8369;)</th>
+              <th class="r" style="width:16%">Total (&#8369;)</th>
+              <th style="width:44px"></th>
+            </tr></thead>
+            <tbody id="ms-items-${ms.id}"></tbody>
+          </table>
+        </div>
+        <div class="ms-footer">
+          <button class="ms-add-btn" onclick="addItem('${ms.id}')">＋ Add item</button>
+          <div class="ms-foot-sum">Milestone total:<span id="ms-fsum-${ms.id}">${p(tot)}</span></div>
+        </div>
+      </div>`;
+    list.appendChild(card);
+    renderItems(ms.id);
+  });
+  renderGrandBar();
+}
+
+function renderItems(msId){
+  const ms=milestones.find(m=>m.id===msId);
+  const tbody=document.getElementById('ms-items-'+msId);
+  if(!tbody)return;
+  tbody.innerHTML='';
+  const tot=msTotal(ms);
+  ms.items.forEach((it,i)=>{
+    const itT=it.qty*it.up;
+    const tr=document.createElement('tr');
+    const uopts=UNITS.map(u=>`<option${u===it.unit?' selected':''}>${u}</option>`).join('');
+    tr.innerHTML=`
+      <td><input class="ei wide" value="${it.name}" onchange="updItem('${msId}',${i},'name',this.value)"></td>
+      <td><input class="ei r" type="number" min="0" step="0.5" value="${it.qty}" onchange="updItem('${msId}',${i},'qty',+this.value)"></td>
+      <td style="text-align:center"><select class="unit-sel" onchange="updItem('${msId}',${i},'unit',this.value)">${uopts}</select></td>
+      <td><input class="ei r" type="number" min="0" step="1" value="${it.up}" onchange="updItem('${msId}',${i},'up',+this.value)"></td>
+      <td class="tot-cell" id="it-tot-${msId}-${i}">${p(itT)}</td>
+      <td style="text-align:center"><button class="btn-icon" onclick="rmItem('${msId}',${i})" title="Remove">&#10005;</button></td>`;
+    tbody.appendChild(tr);
+  });
+  const sub=document.createElement('tr');sub.className='subtot-row';
+  sub.innerHTML=`<td colspan="4" style="text-align:right;padding-right:14px">Milestone subtotal</td><td class="tot-cell">${p(tot)}</td><td></td>`;
+  tbody.appendChild(sub);
+}
+
+function updItem(msId,i,field,val){
+  const ms=milestones.find(m=>m.id===msId);
+  ms.items[i][field]=val;
+  const itT=ms.items[i].qty*ms.items[i].up;
+  const iEl=document.getElementById(`it-tot-${msId}-${i}`);
+  if(iEl)iEl.innerHTML=p(itT);
+  const tot=msTotal(ms);
+  const tEl=document.getElementById('ms-tot-'+msId);
+  const fEl=document.getElementById('ms-fsum-'+msId);
+  if(tEl)tEl.innerHTML=p(tot);
+  if(fEl)fEl.innerHTML=p(tot);
+  const tbody=document.getElementById('ms-items-'+msId);
+  if(tbody){const sub=tbody.querySelector('.subtot-row .tot-cell');if(sub)sub.innerHTML=p(tot);}
+  renderGrandBar();
+}
+
+function addItem(msId){
+  const ms=milestones.find(m=>m.id===msId);
+  ms.items.push({name:'New material',qty:1,unit:'pcs',up:0});
+  renderItems(msId);
+  refreshMsTotals(msId);
+  renderGrandBar();
+}
+
+function rmItem(msId,i){
+  const ms=milestones.find(m=>m.id===msId);
+  ms.items.splice(i,1);
+  renderItems(msId);
+  refreshMsTotals(msId);
+  renderGrandBar();
+}
+
+function refreshMsTotals(msId){
+  const ms=milestones.find(m=>m.id===msId);
+  const tot=msTotal(ms);
+  const tEl=document.getElementById('ms-tot-'+msId);
+  const fEl=document.getElementById('ms-fsum-'+msId);
+  if(tEl)tEl.innerHTML=p(tot);
+  if(fEl)fEl.innerHTML=p(tot);
+  const sub=document.getElementById('ms-items-'+msId);
+  if(sub){const sc=sub.querySelector('.subtot-row .tot-cell');if(sc)sc.innerHTML=p(tot);}
+}
+
+function toggleMs(id){
+  const ms=milestones.find(m=>m.id===id);
+  ms._open=!ms._open;
+  const body=document.getElementById('ms-body-'+id);
+  const chev=document.getElementById('ms-chev-'+id);
+  if(body)body.classList.toggle('open',ms._open);
+  if(chev)chev.classList.toggle('open',ms._open);
+}
+function expandAll(){milestones.forEach(ms=>ms._open=true);renderBreakdown();}
+function collapseAll(){milestones.forEach(ms=>ms._open=false);renderBreakdown();}
+
+function renderGrandBar(){
+  const filter=document.getElementById('floorFilter')?document.getElementById('floorFilter').value:'all';
+  const vis=filter==='all'?milestones:milestones.filter(m=>m.floor===filter);
+  const byFloor={};
+  vis.forEach(ms=>{byFloor[ms.floor]=(byFloor[ms.floor]||0)+msTotal(ms);});
+  const tot=Object.values(byFloor).reduce((s,v)=>s+v,0);
+  const bar=document.getElementById('grandBar');
+  let html=Object.entries(byFloor).map(([fl,v])=>`<div class="gb-item"><div class="gb-label">${FL[fl]}</div><div class="gb-val">${p(v)}</div></div>`).join('');
+  html+=`<div class="gb-item"><div class="gb-label" style="color:#6EDFA0">Grand Total</div><div class="gb-val hi">${p(tot)}</div></div>`;
+  bar.innerHTML=html;
+}
+
+// ── PAYROLL — Complete rebuild with per-week persistent storage
+const DAY_NAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+let prMode='hours';
+
+// Default roster
+const DEFAULT_EMPLOYEES=[
+  {id:1,name:'Michael',role:'Foreman', dr:850},
+  {id:2,name:'Ramil',  role:'Skilled', dr:750},
+  {id:3,name:'Junior', role:'Skilled', dr:750},
+  {id:4,name:'Nikki',  role:'Skilled', dr:750},
+  {id:5,name:'Raymond',role:'Skilled', dr:750},
+  {id:6,name:'Butchoy',role:'Skilled', dr:750},
+  {id:7,name:'Marvin', role:'Labor',   dr:600},
+  {id:8,name:'Nonoy',  role:'Labor',   dr:600},
+  {id:9,name:'Labor2', role:'Labor',   dr:600},
+];
+
+let employees=[...DEFAULT_EMPLOYEES.map(e=>({...e}))];
+let nextEid=10;
+// weeklyHours[weekKey][empId][0..6] = hours
+let weeklyHours={};
+// savedWeeks = Set of weekKeys that have been explicitly saved
+let savedWeeks=new Set();
+
+// ── Storage keys
+const SK_ROSTER  = 'vp_roster';
+const SK_NEXTEID = 'vp_nexteid';
+const SK_MODE    = 'vp_mode';
+const SK_WEEKS   = 'vp_saved_weeks';
+function skWeek(wk){ return 'vp_week_'+wk.replace(/-/g,''); }
+
+// ── Storage wrappers — dual mode
+// • Inside Claude.ai: uses window.storage (persistent across sessions)
+// • Local file / offline: falls back to localStorage (persists in browser)
+const USE_CLAUDE_STORAGE = typeof window.storage !== 'undefined' && window.storage !== null;
+
+async function stGet(key){
+  if(USE_CLAUDE_STORAGE){
+    try{
+      const r=await window.storage.get(key);
+      return (r&&r.value!==undefined)?r.value:null;
+    }catch(e){ return null; } // missing key throws → null
+  } else {
+    // localStorage fallback
+    try{ return localStorage.getItem('velarde_'+key); }
+    catch(e){ return null; }
+  }
+}
+async function stSet(key,val){
+  if(USE_CLAUDE_STORAGE){
+    try{ await window.storage.set(key,val); return true; }
+    catch(e){ console.warn('storage.set failed:',key,e); return false; }
+  } else {
+    try{ localStorage.setItem('velarde_'+key,val); return true; }
+    catch(e){ console.warn('localStorage.set failed:',key,e); return false; }
+  }
+}
+async function stDel(key){
+  if(USE_CLAUDE_STORAGE){
+    try{ await window.storage.delete(key); return true; }
+    catch(e){ return false; }
+  } else {
+    try{ localStorage.removeItem('velarde_'+key); return true; }
+    catch(e){ return false; }
+  }
+}
+
+// ── Helpers
+function getWeekKey(){ return document.getElementById('weekDate').value||''; }
+function getMonday(dateStr){
+  const d=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  const day=d.getDay();
+  const diff=day===0?-6:1-day;
+  d.setDate(d.getDate()+diff);
+  return d;
+}
+function getWeekDates(mon){
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(d.getDate()+i);return d;});
+}
+function fmtDate(d){ return d.toLocaleDateString('en-PH',{month:'short',day:'numeric'}); }
+function todayIdx(weekDates){
+  const t=new Date();t.setHours(0,0,0,0);
+  return weekDates.findIndex(d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()===t.getTime();});
+}
+function pfmt(n){ return '₱'+Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function empPay(dr,hrs){ return (dr/8)*hrs; }
+function getEmpHours(wk,eid){ return (weeklyHours[wk]&&weeklyHours[wk][eid])||[0,0,0,0,0,0,0]; }
+function getTotalHrs(wk,eid){ return getEmpHours(wk,eid).reduce((s,h)=>s+(+h||0),0); }
+function ensureWeekData(wk){
+  if(!weeklyHours[wk]) weeklyHours[wk]={};
+  employees.forEach(e=>{
+    if(!weeklyHours[wk][e.id]) weeklyHours[wk][e.id]=[0,0,0,0,0,0,0];
+  });
+}
+function weekHasData(wk){
+  if(!weeklyHours[wk]) return false;
+  return Object.values(weeklyHours[wk]).some(hrs=>hrs.some(h=>(+h||0)>0));
+}
+
+// ── Week navigation
+function setWeekInput(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+  document.getElementById('weekDate').value=`${y}-${m}-${dd}`;
+}
+function prevWeek(){ const m=getMonday(getWeekKey());m.setDate(m.getDate()-7);setWeekInput(m);renderPayroll(); }
+function nextWeek(){ const m=getMonday(getWeekKey());m.setDate(m.getDate()+7);setWeekInput(m);renderPayroll(); }
+function goToday(){ setWeekInput(getMonday());renderPayroll(); }
+function onWeekChange(){ renderPayroll(); }
+
+// ── Mode
+function setMode(m){
+  prMode=m;
+  document.getElementById('modeHrsBtn').className='pr-mode-btn'+(m==='hours'?' active':'');
+  document.getElementById('modeDaysBtn').className='pr-mode-btn'+(m==='days'?' active':'');
+  renderPayroll();
+  saveRoster();
+}
+
+// ── Save badge
+let _badgeTimer=null;
+function showBadge(msg,color){
+  const b=document.getElementById('prSaveBadge');
+  if(!b)return;
+  b.textContent=msg;
+  b.style.color=color||'#16A34A';
+  b.style.opacity='1';
+  clearTimeout(_badgeTimer);
+  _badgeTimer=setTimeout(()=>{b.style.opacity='0';},2500);
+}
+
+// ──────────────────────────────────────────────
+// STORAGE: roster (employees + mode)
+// ──────────────────────────────────────────────
+async function saveRoster(){
+  const ok1 = await stSet(SK_ROSTER,  JSON.stringify(employees));
+  const ok2 = await stSet(SK_NEXTEID, String(nextEid));
+  const ok3 = await stSet(SK_MODE,    prMode);
+  if(!ok1||!ok2||!ok3) console.warn('saveRoster: one or more writes failed');
+  else console.log('saveRoster OK via', USE_CLAUDE_STORAGE?'window.storage':'localStorage');
+}
+async function loadRoster(){
+  const r  = await stGet(SK_ROSTER);
+  const ei = await stGet(SK_NEXTEID);
+  const mo = await stGet(SK_MODE);
+  if(r)  try{ employees = JSON.parse(r); }catch(e){}
+  if(ei) nextEid = parseInt(ei)||10;
+  if(mo) prMode  = mo;
+}
+
+// ──────────────────────────────────────────────
+// STORAGE: save ONE week
+// ──────────────────────────────────────────────
+async function saveWeek(wk){
+  if(!wk){ showBadge('⚠ No week selected','#DC2626'); return; }
+  const data = weeklyHours[wk]||{};
+  const ok1  = await stSet(skWeek(wk), JSON.stringify(data));
+  if(!ok1){ showBadge('⚠ Save failed','#DC2626'); return; }
+  savedWeeks.add(wk);
+  const ok2  = await stSet(SK_WEEKS, JSON.stringify([...savedWeeks]));
+  if(!ok2){ showBadge('⚠ Index save failed','#DC2626'); return; }
+  console.log('saveWeek OK:',wk,'workers:',Object.keys(data).length,'via',USE_CLAUDE_STORAGE?'cloud':'localStorage');
+  showBadge(USE_CLAUDE_STORAGE ? '✓ Week saved' : '✓ Saved (local)');
+  renderSavedWeeksList();
+}
+
+// ──────────────────────────────────────────────
+// STORAGE: load all saved weeks
+// ──────────────────────────────────────────────
+async function loadAllWeeks(){
+  const raw = await stGet(SK_WEEKS);
+  if(!raw){ savedWeeks=new Set(); return; }
+  let keys=[];
+  try{ keys=JSON.parse(raw); }catch(e){ savedWeeks=new Set(); return; }
+  savedWeeks = new Set(keys);
+  for(const wk of keys){
+    const wd = await stGet(skWeek(wk));
+    if(!wd) continue;
+    try{
+      const parsed = JSON.parse(wd);
+      // JSON round-trip turns numeric keys to strings — convert back
+      const fixed  = {};
+      Object.entries(parsed).forEach(([k,v])=>{ fixed[+k]=v; });
+      weeklyHours[wk] = fixed;
+    }catch(e){ console.warn('loadWeek parse error for',wk,e); }
+  }
+  console.log('Loaded',keys.length,'saved week(s):',keys);
+}
+
+// ──────────────────────────────────────────────
+// STORAGE: delete one week
+// ──────────────────────────────────────────────
+async function deleteWeek(wk){
+  if(!confirm('Delete saved payroll for week of '+wk+'?')) return;
+  await stDel(skWeek(wk));
+  savedWeeks.delete(wk);
+  delete weeklyHours[wk];
+  await stSet(SK_WEEKS, JSON.stringify([...savedWeeks]));
+  showBadge('🗑 Week deleted','#D97706');
+  renderPayroll();
+}
+
+// ──────────────────────────────────────────────
+// STORAGE: clear EVERYTHING
+// ──────────────────────────────────────────────
+async function clearAllData(){
+  if(!confirm('Delete ALL saved payroll data — roster and all weeks? This cannot be undone.')) return;
+  for(const wk of savedWeeks) await stDel(skWeek(wk));
+  await stDel(SK_WEEKS);
+  await stDel(SK_ROSTER);
+  await stDel(SK_NEXTEID);
+  await stDel(SK_MODE);
+  employees  = [...DEFAULT_EMPLOYEES.map(e=>({...e}))];
+  weeklyHours= {};
+  savedWeeks = new Set();
+  nextEid    = 10;
+  prMode     = 'hours';
+  document.getElementById('modeHrsBtn').className='pr-mode-btn active';
+  document.getElementById('modeDaysBtn').className='pr-mode-btn';
+  showBadge('🗑 All data cleared','#D97706');
+  renderPayroll();
+}
+
+// ──────────────────────────────────────────────
+// DAY INPUT handlers
+// ──────────────────────────────────────────────
+function setDay(eid,dayIdx,rawVal){
+  const wk=getWeekKey();
+  ensureWeekData(wk);
+  let val=parseFloat(rawVal)||0;
+  if(prMode==='days') val=val*8;
+  val=Math.min(Math.max(val,0),24);
+  weeklyHours[wk][eid][dayIdx]=val;
+  renderPayroll();
+}
+function quickSet(eid,dayIdx,preset){
+  const h=preset==='full'?8:preset==='half'?4:0;
+  const wk=getWeekKey();
+  ensureWeekData(wk);
+  weeklyHours[wk][eid][dayIdx]=h;
+  renderPayroll();
+}
+
+// ──────────────────────────────────────────────
+// SAVED WEEKS LIST (sidebar panel)
+// ──────────────────────────────────────────────
+function renderSavedWeeksList(){
+  const el=document.getElementById('prWeeksList');
+  if(!el) return;
+  const weeks=[...savedWeeks].sort().reverse();
+  if(!weeks.length){
+    el.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:8px 0">No weeks saved yet.<br>Enter hours then tap <b>Save Week</b>.</div>';
+    return;
+  }
+  el.innerHTML=weeks.map(wk=>{
+    const mon=getMonday(wk);
+    const dates=getWeekDates(mon);
+    const label=fmtDate(dates[0])+' – '+fmtDate(dates[6]);
+    // compute week total pay
+    let weekPay=0;
+    employees.forEach(e=>{ weekPay+=empPay(e.dr,getTotalHrs(wk,e.id)); });
+    const isCurrent=wk===getWeekKey();
+    return `<div class="wk-saved-item${isCurrent?' wk-current':''}" onclick="jumpToWeek('${wk}')">
+      <div class="wk-saved-label">${label}</div>
+      <div class="wk-saved-pay">${pfmt(weekPay)}</div>
+      <div class="wk-saved-actions">
+        <button class="qb qb-half" onclick="event.stopPropagation();jumpToWeek('${wk}')" title="View">👁</button>
+        <button class="qb qb-off"  onclick="event.stopPropagation();exportWeekCSV('${wk}')" title="Export CSV">⬇</button>
+        <button style="border:none;background:#FEE2E2;color:#B91C1C;border-radius:3px;padding:1px 5px;font-size:10px;cursor:pointer"
+          onclick="event.stopPropagation();deleteWeek('${wk}')" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpToWeek(wk){
+  setWeekInput(getMonday(wk));
+  renderPayroll();
+}
+
+// ──────────────────────────────────────────────
+// MAIN RENDER
+// ──────────────────────────────────────────────
+function renderPayroll(){
+  const wk=getWeekKey();
+  const mon=getMonday(wk);
+  const weekDates=getWeekDates(mon);
+  const tIdx=todayIdx(weekDates);
+  ensureWeekData(wk);
+
+  // week label
+  document.getElementById('pr-week-disp').textContent=
+    fmtDate(weekDates[0])+' – '+fmtDate(weekDates[6])+', '+weekDates[0].getFullYear();
+
+  // save week button state
+  const saveBtn=document.getElementById('prSaveWeekBtn');
+  if(saveBtn){
+    const saved=savedWeeks.has(wk);
+    saveBtn.textContent=saved?'✓ Update Week':'💾 Save Week';
+    saveBtn.style.background=saved?'#D1FAE5':'';
+    saveBtn.style.color=saved?'#065F46':'';
+  }
+
+  // TABLE HEADER
+  const isSun=i=>i===6;
+  document.getElementById('prHead').innerHTML=`<tr>
+    <th style="min-width:120px;position:sticky;left:0;z-index:3;background:#FAFAF8">Employee</th>
+    <th style="min-width:72px">Role</th>
+    <th class="r" style="min-width:70px">Daily<br>Rate</th>
+    ${DAY_NAMES.map((d,i)=>`
+      <th class="day-col day-col-head${i===tIdx?' today-col':''}${isSun(i)?' sunday':''}">
+        <span class="dn">${d}</span>
+        <span class="dd">${fmtDate(weekDates[i])}</span>
+        ${isSun(i)?'<span class="dd" style="color:#DC2626;font-size:9px">REST</span>':''}
+      </th>`).join('')}
+    <th class="r" style="min-width:65px">Total<br>${prMode==='hours'?'Hrs':'Days'}</th>
+    <th class="r" style="min-width:110px">Net Pay</th>
+    <th style="width:36px"></th>
+  </tr>`;
+
+  // BODY — grouped by role
+  const body=document.getElementById('prBody');
+  body.innerHTML='';
+  const dayTots=[0,0,0,0,0,0,0];
+  let grandHrs=0,grandPay=0;
+
+  ['Foreman','Skilled','Labor','Other'].forEach(role=>{
+    const grp=employees.filter(e=>e.role===role);
+    if(!grp.length) return;
+    const rh=document.createElement('tr');
+    rh.className='role-hdr';
+    rh.innerHTML=`<td colspan="${3+7+3}" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);padding:5px 10px;background:#F6F3EE">${role}s (${grp.length})</td>`;
+    body.appendChild(rh);
+
+    grp.forEach(e=>{
+      const hrs=getEmpHours(wk,e.id);
+      const totHrs=hrs.reduce((s,h)=>s+(+h||0),0);
+      const pw=empPay(e.dr,totHrs);
+      grandHrs+=totHrs; grandPay+=pw;
+      hrs.forEach((h,i)=>dayTots[i]+=(+h||0));
+
+      const dispVal=i=>{
+        const h=+hrs[i]||0;
+        if(prMode==='hours') return h>0?h.toFixed(h%1?1:0):'';
+        return h>0?(h/8).toFixed(h%8?1:0):'';
+      };
+      const inpCls=i=>{
+        const h=+hrs[i]||0;
+        if(h===0)  return 'day-inp absent';
+        if(h===4)  return 'day-inp half';
+        if(h>8)    return 'day-inp overtime';
+        return 'day-inp worked';
+      };
+
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td style="position:sticky;left:0;background:var(--white);z-index:1">
+          <input class="ti" value="${e.name}" onchange="updE(${e.id},'name',this.value)" style="width:108px;font-weight:600">
+        </td>
+        <td>
+          <select class="ti" onchange="updE(${e.id},'role',this.value)" style="width:auto;font-size:12px">
+            ${['Foreman','Skilled','Labor','Other'].map(r=>`<option${r===e.role?' selected':''}>${r}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <input class="ti r" type="number" min="0" step="50" value="${e.dr}"
+            onchange="updE(${e.id},'dr',+this.value)" style="width:60px;font-size:12px">
+        </td>
+        ${hrs.map((h,i)=>`
+          <td class="day-col${i===tIdx?' today-col':''}">
+            <div class="dc-wrap">
+              <input class="${inpCls(i)}" type="number" min="0" max="${prMode==='hours'?24:3}" step="0.5"
+                value="${dispVal(i)}" placeholder="${isSun(i)?'–':'–'}"
+                ${isSun(i)?'style="background:#FFF7F7;border-color:#FECACA"':''}
+                onchange="setDay(${e.id},${i},this.value)"
+                onfocus="if(+this.value===0)this.value=''"
+                onblur="if(this.value==='')setDay(${e.id},${i},0)">
+              <div class="qb-row">
+                <button class="qb qb-full" onclick="quickSet(${e.id},${i},'full')">F</button>
+                <button class="qb qb-half" onclick="quickSet(${e.id},${i},'half')">H</button>
+                <button class="qb qb-off"  onclick="quickSet(${e.id},${i},'off')">O</button>
+              </div>
+            </div>
+          </td>`).join('')}
+        <td class="total-hrs-cell">
+          ${totHrs>0?(prMode==='hours'?totHrs.toFixed(1):(totHrs/8).toFixed(1)):'–'}
+        </td>
+        <td class="pay-cell">${pw>0?pfmt(pw):'–'}</td>
+        <td style="text-align:center">
+          <button class="del-btn" onclick="rmE(${e.id})">✕</button>
+        </td>`;
+      body.appendChild(tr);
+    });
+  });
+
+  // FOOTER
+  const dispDT=i=>{ const h=dayTots[i]; return h>0?(prMode==='hours'?h.toFixed(1):(h/8).toFixed(1)):'–'; };
+  document.getElementById('prFoot').innerHTML=`
+    <tr style="background:#EFF6FF;border-top:2px solid #BFDBFE">
+      <td colspan="3" style="font-size:10px;font-weight:700;color:#1D4ED8;padding:7px 10px">
+        Daily ${prMode==='hours'?'Hours':'Days'} Total
+      </td>
+      ${dayTots.map((h,i)=>`
+        <td class="day-col" style="text-align:center;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;color:${h>0?'#1D4ED8':'#CBD5E1'}">
+          ${dispDT(i)}
+        </td>`).join('')}
+      <td class="total-hrs-cell" style="background:#EFF6FF;color:#1D4ED8">
+        ${grandHrs>0?(prMode==='hours'?grandHrs.toFixed(1):(grandHrs/8).toFixed(1)):'–'}
+      </td>
+      <td colspan="2" style="background:#EFF6FF"></td>
+    </tr>
+    <tr class="totrow">
+      <td colspan="3" style="padding:14px 10px">
+        <div style="font-size:14px;font-weight:700;color:var(--ink)">💰 Total Payroll — This Week</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:3px">${employees.length} workers · ${grandHrs.toFixed(1)} hrs (${(grandHrs/8).toFixed(1)} days)</div>
+      </td>
+      ${Array(7).fill('<td></td>').join('')}
+      <td class="total-hrs-cell" style="font-size:14px;color:var(--blue)">
+        ${prMode==='hours'?grandHrs.toFixed(1)+'h':(grandHrs/8).toFixed(1)+'d'}
+      </td>
+      <td class="pay-cell" style="font-size:18px">${pfmt(grandPay)}</td>
+      <td></td>
+    </tr>`;
+
+  // KPI cards
+  const byRole=r=>employees.filter(e=>e.role===r);
+  const rolePay=r=>byRole(r).reduce((s,e)=>s+empPay(e.dr,getTotalHrs(wk,e.id)),0);
+  document.getElementById('pr-total').innerHTML=pfmt(grandPay);
+  document.getElementById('pr-totalhrs').textContent=
+    grandHrs.toFixed(1)+' hrs / '+(grandHrs/8).toFixed(1)+' days';
+  document.getElementById('pr-foreman').innerHTML=pfmt(rolePay('Foreman'));
+  document.getElementById('pr-foreman-n').textContent=
+    byRole('Foreman').length+' person(s)';
+  document.getElementById('pr-skilled').innerHTML=pfmt(rolePay('Skilled'));
+  document.getElementById('pr-skilled-n').textContent=
+    byRole('Skilled').length+' skilled, '+byRole('Labor').length+' labor';
+
+  // cumulative
+  renderCumulative();
+  renderSavedWeeksList();
+}
+
+// ── CUMULATIVE across all saved weeks
+function renderCumulative(){
+  const grid=document.getElementById('prCumulGrid');
+  if(!grid) return;
+  const weeks=[...savedWeeks];
+  if(!weeks.length){
+    grid.innerHTML='<div style="color:var(--ink3);font-size:12px;grid-column:1/-1;padding:4px 0">No saved weeks yet — enter hours for a week and tap <b>💾 Save Week</b>.</div>';
+    return;
+  }
+  grid.innerHTML='';
+  let grandTotal=0;
+  employees.forEach(e=>{
+    let totHrs=0;
+    weeks.forEach(wk=>{ totHrs+=getTotalHrs(wk,e.id); });
+    const totPay=empPay(e.dr,totHrs);
+    grandTotal+=totPay;
+    if(totHrs===0) return; // skip workers with zero hours
+    const card=document.createElement('div');
+    card.className='pr-cumul-card';
+    card.innerHTML=`
+      <div class="pr-cumul-name">${e.name}</div>
+      <div class="pr-cumul-role">${e.role} · ₱${e.dr.toLocaleString()}/day</div>
+      <div class="pr-cumul-row"><span>Total Hours</span><span>${totHrs.toFixed(1)} hrs</span></div>
+      <div class="pr-cumul-row"><span>Total Days</span><span>${(totHrs/8).toFixed(1)} days</span></div>
+      <div class="pr-cumul-row" style="margin-top:8px;padding-top:6px;border-top:1px solid #E5E7EB">
+        <span style="font-weight:700;color:var(--ink)">Total Earned</span>
+        <span style="font-size:13px;font-weight:700">${pfmt(totPay)}</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+  // grand card
+  const gc=document.createElement('div');
+  gc.className='pr-cumul-card';
+  gc.style.cssText='background:#F0FDF4;border:2px solid #86EFAC;grid-row:span 1';
+  gc.innerHTML=`
+    <div class="pr-cumul-name" style="color:#15803D;font-size:14px">📊 Grand Total</div>
+    <div class="pr-cumul-role">${weeks.length} week(s) · ${employees.length} workers</div>
+    <div class="pr-cumul-row" style="margin-top:10px;padding-top:10px;border-top:1px solid #86EFAC">
+      <span style="font-weight:700;font-size:13px">All Workers Combined</span>
+      <span style="font-size:16px;font-weight:700;color:#15803D">${pfmt(grandTotal)}</span>
+    </div>`;
+  grid.appendChild(gc);
+}
+
+// ── Employee edit / remove
+function updE(id,f,v){
+  const e=employees.find(e=>e.id===id);
+  if(e){ e[f]=v; renderPayroll(); saveRoster(); }
+}
+function rmE(id){
+  if(!confirm('Remove this employee?')) return;
+  employees=employees.filter(e=>e.id!==id);
+  renderPayroll(); saveRoster();
+}
+
+// ── Export CSV for one week
+function exportWeekCSV(wk){
+  const mon=getMonday(wk);
+  const dates=getWeekDates(mon);
+  let c='Name,Role,Daily Rate,'+DAY_NAMES.map((d,i)=>d+' '+fmtDate(dates[i])).join(',')
+       +',Total Hours,Total Days,Net Pay\n';
+  employees.forEach(e=>{
+    const hrs=getEmpHours(wk,e.id);
+    const tot=hrs.reduce((s,h)=>s+(+h||0),0);
+    c+=`"${e.name}","${e.role}",${e.dr},${hrs.map(h=>(+h||0).toFixed(1)).join(',')},`
+      +`${tot.toFixed(1)},${(tot/8).toFixed(2)},${empPay(e.dr,tot).toFixed(2)}\n`;
+  });
+  const total=employees.reduce((s,e)=>s+empPay(e.dr,getTotalHrs(wk,e.id)),0);
+  c+=`,,,,,,,,${total.toFixed(2)}\n`;
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(c);
+  a.download=`payroll_week_${wk}.csv`;
+  a.click();
+}
+
+// ── Export current week (toolbar button)
+function exportCSV(){ exportWeekCSV(getWeekKey()); }
+
+// ── MODAL
+function openEmpModal(){
+  document.getElementById('modalBox').innerHTML=`
+    <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">Add Employee</h3>
+    <div class="form-row"><label>Full Name</label>
+      <input class="form-input" id="m-name" placeholder="e.g. Juan dela Cruz"></div>
+    <div class="form-row"><label>Role</label>
+      <select class="form-input" id="m-role" onchange="autoRate()">
+        <option>Foreman</option><option selected>Skilled</option>
+        <option>Labor</option><option>Other</option>
+      </select></div>
+    <div class="form-row"><label>Daily Rate (₱)</label>
+      <input class="form-input" id="m-rate" type="number" min="0" step="50" value="750">
+      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Foreman ₱850 · Skilled ₱750 · Labor ₱600</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-green"   onclick="addEmp()">Add to Roster</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('m-name')?.focus(),80);
+}
+function autoRate(){
+  const rates={Foreman:850,Skilled:750,Labor:600,Other:700};
+  document.getElementById('m-rate').value=rates[document.getElementById('m-role').value]||700;
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+function addEmp(){
+  const name=document.getElementById('m-name').value.trim();
+  const role=document.getElementById('m-role').value;
+  const dr=parseFloat(document.getElementById('m-rate').value);
+  if(!name){ alert('Please enter a name.'); return; }
+  if(!dr||dr<=0){ alert('Please enter a valid daily rate.'); return; }
+  employees.push({id:nextEid++,name,role,dr});
+  closeModal(); renderPayroll(); saveRoster();
+}
+
+// ── INIT: load everything then render
+(async function initPayroll(){
+  await loadRoster();
+  await loadAllWeeks();
+
+  // ── CSV IMPORT: payroll_week_2026-07-13 (applied once if not already saved)
+  const CSV_WK='2026-07-13';
+  if(!savedWeeks.has(CSV_WK)){
+    employees=[
+      {id:1, name:'Michael', role:'Foreman', dr:850},
+      {id:2, name:'Ramil',   role:'Labor',   dr:600},
+      {id:3, name:'Junior',  role:'Skilled', dr:750},
+      {id:4, name:'Anthony', role:'Labor',   dr:600},
+      {id:5, name:'Raymond', role:'Skilled', dr:750},
+      {id:6, name:'Rusty',   role:'Skilled', dr:750},
+      {id:7, name:'Marvin',  role:'Labor',   dr:600},
+      {id:8, name:'Tonton',  role:'Skilled', dr:750},
+      {id:9, name:'Steven',  role:'Labor',   dr:600},
+      {id:10,name:'Tatay',   role:'Other',   dr:550},
+    ];
+    nextEid=11;
+    weeklyHours[CSV_WK]={
+      1:[0,9,8,8,8,8,0],
+      2:[6,9,8,8,8,8,0],
+      3:[0,9,8,8,8,8,0],
+      4:[8,9,8,8,8,8,0],
+      5:[8,9,8,8,8,8,0],
+      6:[8,9,8,8,8,8,0],
+      7:[8,9,8,8,8,8,0],
+      8:[0,9,8,8,8,8,0],
+      9:[4,9,8,0,8,8,0],
+      10:[8,8,8,8,8,8,0],
+    };
+    await saveRoster();
+    await saveWeek(CSV_WK);
+    console.log('CSV import saved: week',CSV_WK,'₱38,181.25');
+  }
+
+  // sync mode buttons
+  if(prMode==='days'){
+    document.getElementById('modeHrsBtn').className='pr-mode-btn';
+    document.getElementById('modeDaysBtn').className='pr-mode-btn active';
+  }
+  // Jump to the CSV week on first load
+  setWeekInput(getMonday(CSV_WK));
+  renderPayroll();
+})();
+
+
+
+// ── PROGRESS BILLING DATA
+// Status: 'done'|'inprog'|'pending'  TCP=₱5,429,932 (3-storey+Slab Roof, incl. 5% contingency)
+let pbMilestones=[
+  // ── GROUND FLOOR
+  {id:'pb-1', seq:'GF·01',floor:'gf',status:'done',   title:'DOWNPAYMENT for MOBILIZATION',pct:0.0255,payment:138567,matItems:[{name:'Mobilization / deposits',qty:1,unit:'lot',up:138567}],labItems:[{name:'Mobilization',cycles:1,up:0}]},
+  {id:'pb-2', seq:'GF·02',floor:'gf',status:'done',   title:'Demolition, Hauling, Excavation & Soil Poisoning',pct:0.0383,payment:207851,matItems:[{name:'Demolition + hauling + excavation',qty:1,unit:'lot',up:207851}],labItems:[{name:'Demo labor',cycles:1,up:0}]},
+  {id:'pb-3', seq:'GF·03',floor:'gf',status:'done',   title:'Foundation — F1-F5 Footings, FTB-01 Tie Beams, GF Beams B-01/CB-01, Column Starters',pct:0.0561,payment:304845,matItems:[{name:'Foundation materials + GF beams',qty:1,unit:'lot',up:304845}],labItems:[{name:'Foundation labor',cycles:1,up:0}]},
+  {id:'pb-4', seq:'GF·04',floor:'gf',status:'done',   title:'GF Columns C-1/C-2/C-3 (12 cols), Compaction, Early CHB',pct:0.0306,payment:166280,matItems:[{name:'Column rebar + concrete + CHB',qty:1,unit:'lot',up:166280}],labItems:[{name:'Column labor',cycles:1,up:0}]},
+  {id:'pb-5', seq:'GF·05',floor:'gf',status:'done',   title:'GF Slab Pour Right+Left — 100mm S2 two-way, EPS Prep',pct:0.0331,payment:180136,matItems:[{name:'GF slab concrete + EPS',qty:1,unit:'lot',up:180136}],labItems:[{name:'Slab labor',cycles:1,up:0}]},
+  {id:'pb-6', seq:'GF·06',floor:'gf',status:'done',   title:'2F Beams Installation — 160 pcs 16mm + 100 pcs 10mm stirrups [ACTUAL]',pct:0.0306,payment:166280,matItems:[{name:'2F beam rebar [ACTUAL]',qty:1,unit:'lot',up:166280}],labItems:[{name:'Beam installation labor',cycles:1,up:0}]},
+  {id:'pb-7', seq:'GF·07',floor:'gf',status:'inprog', title:'GF CHB Partition, Formwork Removal, Doors D01/D02/D03, Windows W01-W04',pct:0.0230,payment:124902,matItems:[{name:'CHB + doors + windows',qty:1,unit:'lot',up:124902}],labItems:[{name:'Partition labor',cycles:1,up:0}]},
+  {id:'pb-8', seq:'GF·08',floor:'gf',status:'pending',title:'Finishing GF — FF01/FF03 Tile, WF01 Plaster, Paint, Kitchen Counter, Cabinetry, Fixtures',pct:0.0179,payment:96899,matItems:[{name:'GF finishing materials',qty:1,unit:'lot',up:96899}],labItems:[{name:'Finishing labor',cycles:1,up:0}]},
+  // ── 2ND FLOOR
+  {id:'pb-9', seq:'2F·01',floor:'2f',status:'pending',title:'2F Slab Formworks 300 pcs Coco 2x3x10 [ACTUAL] + Col Starters + EPS Pre-Pour',pct:0.0393,payment:213198,matItems:[{name:'2F formwork + starters + EPS',qty:1,unit:'lot',up:213198}],labItems:[{name:'Pre-pour labor',cycles:1,up:0}]},
+  {id:'pb-10',seq:'2F·02',floor:'2f',status:'pending',title:'2F Slab READY-MIX Pour 4000psi / 21.70 MPa + Curing',pct:0.0432,payment:234518,matItems:[{name:'Ready mix 2F slab',qty:1,unit:'lot',up:234518}],labItems:[{name:'Pour labor',cycles:1,up:0}]},
+  {id:'pb-11',seq:'2F·03',floor:'2f',status:'pending',title:'2F Columns C-1/C-2/C-3 — 88 pcs 16mm + 200 pcs 10mm ties',pct:0.0196,payment:106599,matItems:[{name:'2F column rebar + concrete',qty:1,unit:'lot',up:106599}],labItems:[{name:'Column labor',cycles:1,up:0}]},
+  {id:'pb-12',seq:'2F·04',floor:'2f',status:'pending',title:'2F CHB 125mm Partition 1200 pcs + EPS Rough-ins',pct:0.0196,payment:106599,matItems:[{name:'2F CHB + EPS rough-ins',qty:1,unit:'lot',up:106599}],labItems:[{name:'CHB labor',cycles:1,up:0}]},
+  {id:'pb-13',seq:'2F·05',floor:'2f',status:'pending',title:'GF Formwork Removal + GF Interior Works — Doors, Windows, CHB',pct:0.0275,payment:149239,matItems:[{name:'GF interior works',qty:1,unit:'lot',up:149239}],labItems:[{name:'Interior labor',cycles:1,up:0}]},
+  {id:'pb-14',seq:'2F·06',floor:'2f',status:'pending',title:'3F Beams Installation — 160 pcs 16mm + 100 pcs 10mm stirrups [ACTUAL]',pct:0.0255,payment:138589,matItems:[{name:'3F beam rebar [ACTUAL]',qty:1,unit:'lot',up:138589}],labItems:[{name:'Beam labor',cycles:1,up:0}]},
+  {id:'pb-15',seq:'2F·07',floor:'2f',status:'pending',title:'Finishing GF — Tile FF01/FF03, WF01 Plaster, Paint, KS, WC/LAV/SH, Cabinetry',pct:0.0216,payment:117259,matItems:[{name:'GF finishing',qty:1,unit:'lot',up:117259}],labItems:[{name:'Finishing labor',cycles:1,up:0}]},
+  // ── 3RD FLOOR
+  {id:'pb-16',seq:'3F·01',floor:'3f',status:'pending',title:'3F Slab Formworks 300 pcs Coco 2x3x10 [ACTUAL] + Col Starters + EPS Pre-Pour',pct:0.0382,payment:207338,matItems:[{name:'3F formwork + starters + EPS',qty:1,unit:'lot',up:207338}],labItems:[{name:'Pre-pour labor',cycles:1,up:0}]},
+  {id:'pb-17',seq:'3F·02',floor:'3f',status:'pending',title:'3F Slab READY-MIX Pour 4000psi / 21.70 MPa + Curing',pct:0.0420,payment:228072,matItems:[{name:'Ready mix 3F slab',qty:1,unit:'lot',up:228072}],labItems:[{name:'Pour labor',cycles:1,up:0}]},
+  {id:'pb-18',seq:'3F·03',floor:'3f',status:'pending',title:'3F Columns — 88 pcs 16mm + 200 pcs 10mm ties, concreting',pct:0.0191,payment:103669,matItems:[{name:'3F column rebar + concrete',qty:1,unit:'lot',up:103669}],labItems:[{name:'Column labor',cycles:1,up:0}]},
+  {id:'pb-19',seq:'3F·04',floor:'3f',status:'pending',title:'3F CHB 125mm Partition 1200 pcs + EPS Rough-ins',pct:0.0191,payment:103669,matItems:[{name:'3F CHB + EPS rough-ins',qty:1,unit:'lot',up:103669}],labItems:[{name:'CHB labor',cycles:1,up:0}]},
+  {id:'pb-20',seq:'3F·05',floor:'3f',status:'pending',title:'2F Formwork Removal + 2F Interior Works — Doors, Windows, CHB',pct:0.0267,payment:145137,matItems:[{name:'2F interior works',qty:1,unit:'lot',up:145137}],labItems:[{name:'Interior labor',cycles:1,up:0}]},
+  {id:'pb-21',seq:'3F·06',floor:'3f',status:'pending',title:'Roof Beams RB-01 200x300mm + Slab Roof Formwork 300 pcs Coco + Pre-Pour Prep',pct:0.0248,payment:134769,matItems:[{name:'Roof beam + slab formwork',qty:1,unit:'lot',up:134769}],labItems:[{name:'Beam labor',cycles:1,up:0}]},
+  {id:'pb-22',seq:'3F·07',floor:'3f',status:'pending',title:'Finishing 2F — Tile FF01/FF02/FF03, WF01 Plaster, Paint, KS, WC/LAV/SH, Cabinetry',pct:0.0210,payment:114036,matItems:[{name:'2F finishing',qty:1,unit:'lot',up:114036}],labItems:[{name:'Finishing labor',cycles:1,up:0}]},
+  // ── SLAB ROOF / ROOF DECK
+  {id:'pb-23',seq:'RD·01',floor:'rd',status:'pending',title:'Slab Roof READY-MIX Pour + Curing (3rd final slab pour — roof deck)',pct:0.0430,payment:233272,matItems:[{name:'Ready mix slab roof',qty:1,unit:'lot',up:233272}],labItems:[{name:'Pour labor',cycles:1,up:0}]},
+  {id:'pb-24',seq:'RD·02',floor:'rd',status:'pending',title:'G.I. GA26 Roofing + 10mm Insulation + C-purlins 2x4x1.2mm @600mm OC per S5',pct:0.0358,payment:194391,matItems:[{name:'Roofing system S5',qty:1,unit:'lot',up:194391}],labItems:[{name:'Roofing labor',cycles:1,up:0}]},
+  {id:'pb-25',seq:'RD·03',floor:'rd',status:'pending',title:'Steel Truss L50x50x5mm + L25x25x5mm web + Shelf angle per S5 truss detail',pct:0.0322,payment:174954,matItems:[{name:'Steel truss fabrication',qty:1,unit:'lot',up:174954}],labItems:[{name:'Truss labor',cycles:1,up:0}]},
+  {id:'pb-26',seq:'RD·04',floor:'rd',status:'pending',title:'CHB 6-inch Parapet 660 pcs + Septic Tank 5.0x1.5m (digestive + 2 leaching) per P5',pct:0.0358,payment:194391,matItems:[{name:'Parapet + septic tank',qty:1,unit:'lot',up:194391}],labItems:[{name:'Masonry labor',cycles:1,up:0}]},
+  {id:'pb-27',seq:'RD·05',floor:'rd',status:'pending',title:'Railings RL01/RL02/RL03 + Canopy RF02 + Waterproofing membrane + cement coating',pct:0.0287,payment:155513,matItems:[{name:'Railings + waterproofing',qty:1,unit:'lot',up:155513}],labItems:[{name:'Railing/waterproofing labor',cycles:1,up:0}]},
+  {id:'pb-28',seq:'RD·06',floor:'rd',status:'pending',title:'Electrical MDP + PB-A to PB-E (5 sub-panels) + 22mm2 THHN wiring + outlets/lights per E1-E6',pct:0.0465,payment:252572,matItems:[{name:'Electrical full system',qty:1,unit:'lot',up:252572}],labItems:[{name:'Electrical labor',cycles:1,up:0}]},
+  {id:'pb-29',seq:'RD·07',floor:'rd',status:'pending',title:'Plumbing GI supply + 4in PVC sewer + storm drain + FDAS sprinkler + water tank per P1-EE1',pct:0.0394,payment:213831,matItems:[{name:'Plumbing full system',qty:1,unit:'lot',up:213831}],labItems:[{name:'Plumbing labor',cycles:1,up:0}]},
+  {id:'pb-30',seq:'RD·08',floor:'rd',status:'pending',title:'Exterior Works — 75 bags skimcoat WF01 + 25 gal elastomeric all 4 facades + hallway tiles',pct:0.0501,payment:271990,matItems:[{name:'Exterior finishing',qty:1,unit:'lot',up:271990}],labItems:[{name:'Exterior labor',cycles:1,up:0}]},
+  {id:'pb-31',seq:'RD·09',floor:'rd',status:'pending',title:'3F Formwork Removal + 3F Interior/Finishing + Project Turnover & Punchlist',pct:0.0465,payment:250567,matItems:[{name:'3F finishing + turnover',qty:1,unit:'lot',up:250567}],labItems:[{name:'Finishing labor',cycles:1,up:0}]},
+];
+
+const pbMatTotal=ms=>ms.matItems.reduce((s,it)=>s+it.qty*it.up,0);
+const pbLabTotal=ms=>ms.labItems.reduce((s,it)=>s+it.up,0);
+const pbRowTotal=ms=>pbMatTotal(ms)+pbLabTotal(ms);
+const floorColors={gf:'#7A4A20','2f':'#1D5FA0','3f':'#2D7A4F',rd:'#6A4A8A'};
+const floorLabels={gf:'GF','2f':'2F','3f':'3F',rd:'RD'};
+
+function renderBilling(){
+  const p=n=>'₱'+Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const tcp=pbMilestones.reduce((s,m)=>s+m.payment,0);
+  const done=pbMilestones.filter(m=>m.status==='done');
+  const inprog=pbMilestones.filter(m=>m.status==='inprog');
+  document.getElementById('pb-tcp').innerHTML=p(tcp);
+  document.getElementById('pb-count').innerHTML=pbMilestones.length;
+  document.getElementById('pb-done').textContent=done.length+' done · '+inprog.length+' in progress';
+  const list=document.getElementById('pbList');
+  list.innerHTML='';
+  pbMilestones.forEach(ms=>{
+    const stCol=ms.status==='done'?'var(--green)':ms.status==='inprog'?'var(--amber)':'var(--rule)';
+    const stLbl=ms.status==='done'?'✓ Done':ms.status==='inprog'?'⬤ In Progress':'○ Pending';
+    const fc=floorColors[ms.floor];
+    const pct=Math.round(ms.pct*1000)/10;
+    const div=document.createElement('div');
+    div.style.cssText='background:var(--white);border:1px solid var(--rule);border-radius:10px;margin-bottom:10px;overflow:hidden';
+    div.innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;border-left:4px solid ${fc}"
+           onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span style="font-size:11px;font-weight:700;background:${fc};color:#fff;border-radius:4px;padding:2px 8px">${ms.seq}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${ms.title}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${pct}% of TCP</div>
+        </div>
+        <div style="text-align:right;min-width:120px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--ink)">${p(ms.payment)}</div>
+          <div style="font-size:11px;font-weight:600;color:${stCol};margin-top:2px">${stLbl}</div>
+        </div>
+        <select style="font-size:11px;border:1px solid var(--rule);border-radius:4px;padding:3px 6px;background:var(--white);color:var(--ink);margin-left:8px"
+          onchange="pbMilestones.find(m=>m.id==='${ms.id}').status=this.value;renderBilling()" onclick="event.stopPropagation()">
+          <option${ms.status==='done'?' selected':''}>done</option>
+          <option${ms.status==='inprog'?' selected':''}>inprog</option>
+          <option${ms.status==='pending'?' selected':''}>pending</option>
+        </select>
+      </div>
+      <div style="display:none;padding:14px 18px;background:#FAFAF8;border-top:1px solid var(--rule);font-size:12px;color:var(--ink2)">
+        <b>Scope:</b> ${ms.title}<br>
+        <b>Payment:</b> ${p(ms.payment)} &nbsp;·&nbsp; <b>${pct}% of TCP ₱${tcp.toLocaleString('en-PH')}</b>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── PROFIT CALCULATOR
+let profitInitialized=false;
+function initProfitInputs(){
+  if(profitInitialized) return;
+  profitInitialized=true;
+  const grandMat=floors.reduce((s,f)=>s+f.matTotal,0);
+  const grandLab=floors.reduce((s,f)=>s+f.labTotal,0);
+  const tcp=grandMat+grandLab;
+  document.getElementById('pf-tcp').value=tcp;
+  document.getElementById('pf-mat').value=grandMat;
+  document.getElementById('pf-lab').value=grandLab;
+}
+function renderOtherCosts(){
+  const wrap=document.getElementById('pf-oc-wrap');
+  if(!wrap) return;
+  const items=window._pfOC||[];
+  wrap.innerHTML=items.map((oc,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <input class="ti" value="${oc.label}" onchange="window._pfOC[${i}].label=this.value;calcProfit()" style="flex:1;font-size:12px">
+      <input class="ti r" type="number" value="${oc.amt}" onchange="window._pfOC[${i}].amt=+this.value;calcProfit()" style="width:100px;font-size:12px">
+      <button class="del-btn" onclick="window._pfOC.splice(${i},1);renderOtherCosts();calcProfit()">✕</button>
+    </div>`).join('');
+}
+function addOtherCost(){
+  if(!window._pfOC) window._pfOC=[];
+  window._pfOC.push({label:'Other cost',amt:0});
+  renderOtherCosts();calcProfit();
+}
+function calcProfit(){
+  const pfmt=n=>'₱'+Number(n).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const tcp=+document.getElementById('pf-tcp')?.value||0;
+  const mat=+document.getElementById('pf-mat')?.value||0;
+  const lab=+document.getElementById('pf-lab')?.value||0;
+  const oc=(window._pfOC||[]).reduce((s,o)=>s+(+o.amt||0),0);
+  const totalCost=mat+lab+oc;
+  const profit=tcp-totalCost;
+  const margin=tcp>0?profit/tcp*100:0;
+  const el=id=>document.getElementById(id);
+  if(el('pf-profit-num')) el('pf-profit-num').innerHTML=pfmt(profit);
+  if(el('pf-profit-margin')) el('pf-profit-margin').textContent='Margin: '+margin.toFixed(1)+'%';
+  if(el('pfHero')) el('pfHero').style.background=profit>=0?'linear-gradient(135deg,#1a6b3a,#2D7A4F)':'linear-gradient(135deg,#7f1d1d,#B91C1C)';
+  if(el('pf-total-cost')) el('pf-total-cost').innerHTML=pfmt(totalCost);
+  if(el('pf-mat-disp')) el('pf-mat-disp').innerHTML=pfmt(mat);
+  if(el('pf-lab-disp')) el('pf-lab-disp').innerHTML=pfmt(lab);
+  if(el('pf-oc-disp')) el('pf-oc-disp').innerHTML=pfmt(oc);
+}
+function renderProfit(){
+  if(!window._pfOC) window._pfOC=[
+    {label:'Permits & Fees',amt:50000},
+    {label:'Insurance',amt:30000},
+    {label:'Equipment rental',amt:45000},
+    {label:'Transportation',amt:20000},
+    {label:'Miscellaneous',amt:25000},
+  ];
+  initProfitInputs();
+  renderOtherCosts();
+  calcProfit();
+}
+
+
+// ── NAV
+function goPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='breakdown')renderBreakdown();
+  if(id==='billing')renderBilling();
+  if(id==='profit')renderProfit();
+}
+
+</script>
+</body>
+</html>
