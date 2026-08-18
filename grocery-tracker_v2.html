@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tindahan — Grocery Tracker</title>
+<style>
+  :root {
+    --green: #1a7a4a;
+    --green-light: #e8f5ee;
+    --green-mid: #2ea86a;
+    --green-dark: #0f4f2e;
+    --amber: #e08c1a;
+    --amber-light: #fdf3e0;
+    --red: #d03b3b;
+    --red-light: #fdeaea;
+    --bg: #f5f7f5;
+    --surface: #ffffff;
+    --border: #dde8e1;
+    --text: #1a2e23;
+    --text-2: #4a6356;
+    --text-3: #7a9485;
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; }
+
+  /* NAV — top bar (logo + settings) */
+  nav { background: var(--green-dark); color: white; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .nav-logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .nav-logo span { color: #6fdfaa; }
+  .nav-tabs { display: none; }
+
+  /* BOTTOM NAV — mobile first */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--green-dark); display: flex; align-items: stretch; z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0); border-top: 1px solid rgba(255,255,255,0.1); }
+  .bottom-nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: rgba(255,255,255,0.55); cursor: pointer; font-size: 10px; font-weight: 500; padding: 6px 2px; transition: all .15s; }
+  .bottom-nav-tab .nav-icon { font-size: 18px; line-height: 1; }
+  .bottom-nav-tab.active { color: #6fdfaa; }
+  .bottom-nav-tab.active .nav-icon { transform: scale(1.1); }
+
+  /* On desktop, revert to top nav and hide bottom nav */
+  @media(min-width:600px) {
+    nav { height: 56px; }
+    .nav-tabs { display: flex; gap: 2px; }
+    .nav-tab { background: none; border: none; color: rgba(255,255,255,0.65); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .15s; white-space: nowrap; }
+    .nav-tab.active, .nav-tab:hover { background: rgba(255,255,255,0.15); color: white; }
+    .bottom-nav { display: none; }
+    .view { padding-bottom: 24px; }
+  }
+
+  /* VIEWS */
+  .view { display: none; padding: 16px; max-width: 680px; margin: 0 auto; padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .view.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .card-title { font-size: 13px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .stat { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 12px; }
+  .stat-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--green-dark); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+  .stat-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; margin-top: 18px; }
+  .section-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .section-action { font-size: 13px; color: var(--green); font-weight: 500; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .section-action:hover { background: var(--green-light); }
+
+  /* ITEM LIST */
+  .item-list { display: flex; flex-direction: column; gap: 8px; }
+  .item-row { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .item-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .item-info { flex: 1; min-width: 0; }
+  .item-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { font-size: 12px; color: var(--text-3); }
+  .item-price { font-weight: 700; font-size: 14px; color: var(--green-dark); white-space: nowrap; }
+  .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-icon { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 5px 8px; cursor: pointer; font-size: 13px; color: var(--text-2); transition: all .15s; }
+  .btn-icon:hover { background: var(--green-light); border-color: var(--green); color: var(--green); }
+  .btn-icon.danger:hover { background: var(--red-light); border-color: var(--red); color: var(--red); }
+
+  /* BADGE */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--green-light); color: var(--green-dark); }
+  .badge-amber { background: var(--amber-light); color: #7a4a00; }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-gray { background: #eee; color: #555; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-primary:hover { background: var(--green-dark); }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--green-light); border-color: var(--green); }
+  .btn-sm { padding: 7px 12px; font-size: 13px; }
+  .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid #f0b0b0; }
+  .btn-danger:hover { background: var(--red); color: white; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); right: 16px; width: 52px; height: 52px; border-radius: 50%; background: var(--green); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 16px rgba(26,122,74,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; transition: transform .15s; }
+  .fab:hover { transform: scale(1.07); }
+  .fab:active { transform: scale(0.96); }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: flex-end; justify-content: center; overflow: hidden; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; overflow-x: hidden; padding: 20px 20px env(safe-area-inset-bottom, 24px); -webkit-overflow-scrolling: touch; }
+  @media(min-width:500px) { .modal-overlay { align-items: center; } .modal { border-radius: 16px; max-height: 90vh; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-close { background: #eee; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #555; flex-shrink: 0; }
+
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; display: block; }
+  .form-control { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; color: var(--text); background: var(--bg); transition: border-color .15s; }
+  .form-control:focus { outline: none; border-color: var(--green); background: white; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-hint { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+  select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a6356' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+  /* SEARCH */
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-wrap input { width: 100%; padding: 10px 12px 10px 36px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; background: var(--surface); }
+  .search-wrap input:focus { outline: none; border-color: var(--green); }
+  .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; color: var(--text-3); pointer-events: none; }
+
+  /* FILTER CHIPS */
+  .chip-row { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; margin-bottom: 10px; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip { background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; color: var(--text-2); transition: all .15s; }
+  .chip.active { background: var(--green-dark); color: white; border-color: var(--green-dark); }
+
+  /* BUDGET BAR */
+  .budget-wrap { margin-top: 8px; }
+  .budget-bar-bg { background: #e0ebe5; border-radius: 99px; height: 10px; margin: 8px 0 4px; overflow: hidden; }
+  .budget-bar-fill { height: 100%; border-radius: 99px; transition: width .4s; background: var(--green-mid); }
+  .budget-bar-fill.amber { background: var(--amber); }
+  .budget-bar-fill.red { background: var(--red); }
+  .budget-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-3); }
+
+  /* ESTIMATE CARD */
+  .est-card { border: 2px solid var(--green); border-radius: 14px; padding: 16px; margin-top: 8px; background: var(--green-light); }
+  .est-total { font-size: 28px; font-weight: 800; color: var(--green-dark); }
+  .est-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 13px; }
+  .est-row:last-child { border: none; }
+  .est-label { color: var(--text-2); }
+  .est-val { font-weight: 600; }
+
+  /* HISTORY CHART BARS */
+  .history-bar-group { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .hbar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .hbar-label { width: 80px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hbar-track { flex: 1; background: var(--green-light); border-radius: 99px; height: 8px; overflow: hidden; }
+  .hbar-fill { height: 100%; border-radius: 99px; background: var(--green-mid); }
+  .hbar-val { width: 60px; text-align: right; font-weight: 600; color: var(--green-dark); }
+
+  /* SCHEDULE PICKER */
+  .schedule-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .schedule-opt { border: 2px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all .15s; }
+  .schedule-opt.selected { border-color: var(--green); background: var(--green-light); }
+  .schedule-opt-title { font-weight: 700; font-size: 14px; }
+  .schedule-opt-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-3); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-weight: 700; font-size: 16px; color: var(--text-2); margin-bottom: 6px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green-dark); color: white; padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; z-index: 500; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* PRICE TREND */
+  .price-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; }
+  .price-trend.up { color: var(--red); }
+  .price-trend.down { color: var(--green); }
+  .price-trend.flat { color: var(--text-3); }
+
+  /* RECEIPT GROUP */
+  .receipt-header { background: var(--green-light); border-radius: 10px; padding: 10px 14px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid var(--border); }
+  .receipt-header-info { font-weight: 600; font-size: 14px; }
+  .receipt-header-sub { font-size: 12px; color: var(--text-2); }
+  .receipt-header-total { font-weight: 700; font-size: 15px; color: var(--green-dark); }
+  .receipt-body { display: none; margin-bottom: 10px; }
+  .receipt-body.open { display: block; }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tag { background: #eef3ef; color: var(--text-2); border-radius: 4px; padding: 2px 7px; font-size: 11px; }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .scan-item-row { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  .scan-item-row.is-new { border-color: var(--green); }
+  .scan-item-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .scan-item-fields input, .scan-item-fields select { padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; width: 100%; background: var(--bg); }
+  .scan-item-fields input:focus, .scan-item-fields select:focus { outline: none; border-color: var(--green); background: white; }
+  .scan-remove-btn { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 6px; }
+  .scan-remove-btn:hover { color: var(--red); background: var(--red-light); }
+  @media(max-width:480px) {
+    .stat-value { font-size: 16px; }
+    .stat-label { font-size: 11px; }
+    .stat { padding: 10px 8px; }
+    .form-row { grid-template-columns: 1fr; }
+    .scan-item-fields { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Tind<span>ahan</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('dashboard')">Home</button>
+    <button class="nav-tab" onclick="switchView('history')">History</button>
+    <button class="nav-tab" onclick="switchView('products')">Products</button>
+    <button class="nav-tab" onclick="switchView('estimate')">Estimate</button>
+    <button class="nav-tab" onclick="switchView('scan')" style="color:#6fdfaa;">&#128247; Scan</button>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="view-dashboard" class="view active">
+
+  <div style="padding:4px 0 16px;display:flex;align-items:flex-start;justify-content:space-between;">
+    <div>
+      <div style="font-size:21px;font-weight:800;color:var(--green-dark);">Grocery Dashboard</div>
+      <div style="font-size:13px;color:var(--text-2);" id="dash-week-label">Weekly overview</div>
+    </div>
+    <button class="btn-icon" onclick="showResetConfirm()" title="Reset to original data" style="margin-top:4px;">&#9881;</button>
+  </div>
+
+  <div id="reset-confirm-bar" style="display:none;background:var(--amber-light);border:1px solid #f0cc80;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+    <div style="font-size:13px;font-weight:600;color:#7a4a00;margin-bottom:6px;">&#9888; Reset all data to original Excel import?</div>
+    <div style="font-size:12px;color:#7a4a00;margin-bottom:10px;">This removes sessions and products you added and restores the original 3 receipts.</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-sm" style="flex:1;background:#e08c1a;color:white;border:none;border-radius:9px;font-weight:600;cursor:pointer;" onclick="confirmReset()">Yes, reset</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="cancelReset()">Cancel</button>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <button class="btn-icon" onclick="shiftWeek(-1)" style="padding:6px 10px;font-size:16px;">&#8592;</button>
+    <div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--text-2);" id="dash-week-range">&#8212;</div>
+    <button class="btn-icon" onclick="shiftWeek(1)" style="padding:6px 10px;font-size:16px;" id="week-next-btn">&#8594;</button>
+  </div>
+
+  <div class="stat-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;">
+    <div class="stat">
+      <div class="stat-label">Week spend</div>
+      <div class="stat-value" style="font-size:17px;" id="dash-week-spend">&#8369;0</div>
+      <div class="stat-sub" id="dash-week-vs">&#8212;</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Sessions</div>
+      <div class="stat-value" style="font-size:17px;" id="dash-week-sessions">0</div>
+      <div class="stat-sub" id="dash-week-items">0 items</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Est. next</div>
+      <div class="stat-value" style="font-size:17px;" id="dash-est">&#8369;0</div>
+      <div class="stat-sub"><button style="background:none;border:none;color:var(--green);font-size:11px;cursor:pointer;padding:0;" onclick="switchView('estimate')">full estimate &#8594;</button></div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:14px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="card-title" style="margin:0;">Weekly spending</div>
+      <div style="display:flex;gap:4px;">
+        <button class="chip" id="trend-btn-4" onclick="setTrendWeeks(4)">4w</button>
+        <button class="chip active" id="trend-btn-8" onclick="setTrendWeeks(8)">8w</button>
+        <button class="chip" id="trend-btn-12" onclick="setTrendWeeks(12)">12w</button>
+      </div>
+    </div>
+    <div id="dash-trend-chart" style="display:flex;align-items:flex-end;gap:3px;height:90px;"></div>
+    <div id="dash-trend-labels" style="display:flex;gap:3px;margin-top:6px;"></div>
+  </div>
+
+  <div class="card" style="padding:14px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div class="card-title" style="margin:0;">Category breakdown</div>
+      <div style="display:flex;gap:4px;">
+        <button class="chip active" id="cat-scope-week" onclick="setCatScope('week')">This week</button>
+        <button class="chip" id="cat-scope-all" onclick="setCatScope('all')">All time</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-3);margin-bottom:12px;" id="cat-scope-sub"></div>
+    <div id="dash-cat-breakdown"></div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title" id="dash-top-title">Top items this week</div>
+  </div>
+  <div class="item-list" id="dash-top-items"></div>
+
+  <div class="section-header" style="margin-top:16px;">
+    <div class="section-title">Recent sessions</div>
+    <button class="section-action" onclick="openAddSession()">+ New</button>
+  </div>
+  <div class="item-list" id="recent-sessions"></div>
+</div>
+
+<!-- HISTORY -->
+<div id="view-history" class="view">
+  <div class="section-header" style="margin-top:8px;">
+    <div class="section-title">All sessions</div>
+    <button class="section-action" onclick="openAddSession()">+ New</button>
+  </div>
+  <div id="all-sessions-list"></div>
+</div>
+
+<!-- PRODUCTS -->
+<div id="view-products" class="view">
+  <div style="margin-top:8px;">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Search products…" id="product-search" oninput="renderProducts()">
+    </div>
+    <div class="chip-row" id="cat-chips"></div>
+    <div class="item-list" id="product-list"></div>
+  </div>
+</div>
+
+<!-- ESTIMATE -->
+<div id="view-estimate" class="view">
+  <div style="padding:4px 0 14px;">
+    <div style="font-size:19px;font-weight:800;color:var(--green-dark);">Budget estimator</div>
+    <div style="font-size:13px;color:var(--text-2);">Based on your purchase history</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schedule</div>
+    <div class="schedule-opts" id="schedule-opts">
+      <div class="schedule-opt selected" data-val="7" onclick="selectSchedule(this,7)">
+        <div class="schedule-opt-title">Weekly</div>
+        <div class="schedule-opt-sub">Every 7 days</div>
+      </div>
+      <div class="schedule-opt" data-val="14" onclick="selectSchedule(this,14)">
+        <div class="schedule-opt-title">Bi-weekly</div>
+        <div class="schedule-opt-sub">Every 14 days</div>
+      </div>
+      <div class="schedule-opt" data-val="15" onclick="selectSchedule(this,15)">
+        <div class="schedule-opt-title">Bi-monthly</div>
+        <div class="schedule-opt-sub">Twice a month</div>
+      </div>
+      <div class="schedule-opt" data-val="30" onclick="selectSchedule(this,30)">
+        <div class="schedule-opt-title">Monthly</div>
+        <div class="schedule-opt-sub">Once a month</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Buffer / buffer % (for price increase)</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="range" id="buffer-range" min="0" max="30" value="10" style="flex:1;" oninput="updateEstimate()">
+        <span id="buffer-label" style="font-weight:700;min-width:32px;color:var(--green-dark);">10%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="est-card" id="est-card">
+    <div style="font-size:13px;color:var(--green-dark);font-weight:600;margin-bottom:6px;">Estimated next grocery budget</div>
+    <div class="est-total" id="est-grand-total">₱0</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:14px;" id="est-subtitle">0 products from history</div>
+    <div id="est-rows"></div>
+  </div>
+
+  <div class="section-header" style="margin-top:18px;">
+    <div class="section-title">Price trends by category</div>
+  </div>
+  <div class="card">
+    <div class="history-bar-group" id="cat-bars"></div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Product price history</div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" placeholder="Search products…" id="est-search" oninput="renderPriceHistory()">
+  </div>
+  <div id="price-history-list" class="item-list"></div>
+</div>
+
+<!-- FAB -->
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-tab active" id="bnav-dashboard" onclick="switchView('dashboard')">
+    <span class="nav-icon">🏠</span><span>Home</span>
+  </button>
+  <button class="bottom-nav-tab" id="bnav-history" onclick="switchView('history')">
+    <span class="nav-icon">🧾</span><span>History</span>
+  </button>
+  <button class="bottom-nav-tab" id="bnav-products" onclick="switchView('products')">
+    <span class="nav-icon">📦</span><span>Products</span>
+  </button>
+  <button class="bottom-nav-tab" id="bnav-estimate" onclick="switchView('estimate')">
+    <span class="nav-icon">💰</span><span>Estimate</span>
+  </button>
+  <button class="bottom-nav-tab" id="bnav-scan" onclick="switchView('scan')">
+    <span class="nav-icon">📋</span><span>Import</span>
+  </button>
+</nav>
+
+<button class="fab" onclick="openAddSession()" title="New grocery session">+</button>
+
+<!-- SESSION MODAL -->
+<div class="modal-overlay" id="session-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="session-modal-title">New grocery session</div>
+      <button class="modal-close" onclick="closeModal('session-modal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-control" id="s-date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Store</label>
+      <input type="text" class="form-control" id="s-store" placeholder="e.g. SM Hypermarket" list="store-suggestions">
+      <datalist id="store-suggestions"></datalist>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Receipt label</label>
+      <input type="text" class="form-control" id="s-receipt" placeholder="e.g. Receipt 4">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Total amount (₱) — optional</label>
+      <input type="number" class="form-control" id="s-total" placeholder="Leave blank if unknown">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="closeModal('session-modal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveSession()">Create session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="item-modal-title">Add item</div>
+      <button class="modal-close" onclick="closeModal('item-modal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Product name</label>
+      <input type="text" class="form-control" id="i-product" placeholder="e.g. Chicken Wings" list="product-suggestions" oninput="autofillProduct()">
+      <datalist id="product-suggestions"></datalist>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Brand</label>
+        <input type="text" class="form-control" id="i-brand" placeholder="Brand">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-control" id="i-category">
+          <option value="Produce">Produce</option>
+          <option value="Meat">Meat</option>
+          <option value="Seafood">Seafood</option>
+          <option value="Dairy / Milk">Dairy / Milk</option>
+          <option value="Eggs">Eggs</option>
+          <option value="Beverages">Beverages</option>
+          <option value="Canned / Packaged Food">Canned / Packaged Food</option>
+          <option value="Sauces / Seasoning">Sauces / Seasoning</option>
+          <option value="Spices / Seasoning">Spices / Seasoning</option>
+          <option value="Cooking">Cooking</option>
+          <option value="Baking">Baking</option>
+          <option value="Snacks">Snacks</option>
+          <option value="Breakfast / Dairy">Breakfast / Dairy</option>
+          <option value="Baby / Nutrition">Baby / Nutrition</option>
+          <option value="Household">Household</option>
+          <option value="Laundry">Laundry</option>
+          <option value="Personal Care">Personal Care</option>
+          <option value="Kitchen / Household">Kitchen / Household</option>
+          <option value="Pasta / Dry Goods">Pasta / Dry Goods</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Unit price (₱)</label>
+        <input type="number" step="0.01" class="form-control" id="i-price" placeholder="0.00" oninput="calcTotal()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input type="number" step="0.001" class="form-control" id="i-qty" placeholder="1" value="1" oninput="calcTotal()">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Size / Unit</label>
+      <input type="text" class="form-control" id="i-size" placeholder="e.g. 500g, 1L, kg">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Line total</label>
+      <input type="text" class="form-control" id="i-total" readonly style="background:#f5f7f5;font-weight:700;color:var(--green-dark);">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="closeModal('item-modal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="saveItem()">Add item</button>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="max-height:92vh;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title">Session</div>
+        <div style="font-size:12px;color:var(--text-2);" id="detail-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-primary btn-sm" onclick="openAddItem()">+ Add item</button>
+      <button class="btn btn-danger btn-sm" id="delete-session-btn" onclick="showDeleteConfirm()">Delete session</button>
+    </div>
+    <div id="delete-confirm-bar" style="display:none;background:var(--red-light);border:1px solid #f0b0b0;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:none;">
+      <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:10px;">Delete this session and all its items?</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger btn-sm" style="flex:1;" onclick="confirmDeleteSession()">Yes, delete</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="cancelDeleteConfirm()">Cancel</button>
+      </div>
+    </div>
+    <div id="detail-items" class="item-list"></div>
+    <hr class="divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-weight:600;color:var(--text-2);">Session total</span>
+      <span style="font-size:20px;font-weight:800;color:var(--green-dark);" id="detail-total">₱0</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCAN VIEW -->
+<div id="view-scan" class="view">
+  <div style="padding:4px 0 14px;">
+    <div style="font-size:19px;font-weight:800;color:var(--green-dark);">&#128203; Bulk import</div>
+    <div style="font-size:13px;color:var(--text-2);">Paste or type items from your receipt — one per line</div>
+  </div>
+
+  <!-- Step 1: Paste -->
+  <div id="scan-step-upload" class="card">
+    <div class="card-title">Step 1 — Session details</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Store</label>
+        <input type="text" class="form-control" id="scan-store" placeholder="e.g. SM Hypermarket" list="store-suggestions">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-control" id="scan-date">
+      </div>
+    </div>
+
+    <div class="card-title" style="margin-top:8px;">Step 2 — Type or paste receipt items</div>
+    <div style="background:var(--green-light);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--green-dark);line-height:2;">
+      <strong>Format — one item per line, fields separated by <code style="background:rgba(0,0,0,0.08);padding:1px 5px;border-radius:4px;">-</code></strong><br>
+      <code style="font-size:12px;letter-spacing:0.2px;">Product name - price - quantity - size</code><br>
+      <span style="color:var(--text-2);">quantity and size are optional — just leave them out if not needed</span>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text-2);line-height:2.2;">
+      <strong style="color:var(--text);display:block;margin-bottom:2px;">Examples</strong>
+      <code style="font-size:12px;color:var(--green-dark);">Chicken Wings - 285 - 1.5 - kg</code><br>
+      <code style="font-size:12px;color:var(--green-dark);">Medium Eggs - 128</code><br>
+      <code style="font-size:12px;color:var(--green-dark);">Knorr Sinigang - 15.50 - 1 - 22g</code><br>
+      <code style="font-size:12px;color:var(--green-dark);">Pineapple Juice - 29.75 - 4 - 220ml</code><br>
+      <code style="font-size:12px;color:var(--green-dark);">GainPlus - 4279.50</code>
+    </div>
+    <textarea id="scan-paste-area" class="form-control" rows="10"
+      placeholder="Chicken Wings - 285 - 1.5 - kg&#10;Medium Eggs - 128&#10;Knorr Sinigang - 15.50 - 1 - 22g&#10;GainPlus - 4279.50&#10;Fabric Conditioner - 164.75 - 1 - 1L"
+      style="font-family:monospace;font-size:13px;resize:vertical;line-height:1.9;"></textarea>
+    <button class="btn btn-primary btn-full" onclick="parseBulkText()" style="margin-top:10px;">&#9654; Parse items</button>
+  </div>
+
+  <!-- Step 2: Review -->
+  <div id="scan-step-review" style="display:none;">
+    <div class="card">
+      <div class="card-title">Step 3 — Review &amp; edit</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;">
+        Edit any field before saving. <span class="badge badge-green">NEW</span> = new product &nbsp; <span class="badge badge-gray">UPDATE</span> = updates price history.
+      </div>
+      <div id="scan-items-list"></div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:10px;width:100%;" onclick="addBlankScanRow()">+ Add another item</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="resetScan()">&#8592; Start over</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="commitScanResults()">Save all items</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Done -->
+  <div id="scan-step-done" style="display:none;" class="card">
+    <div style="text-align:center;padding:20px 0;">
+      <div style="font-size:40px;">&#9989;</div>
+      <div style="font-size:18px;font-weight:800;color:var(--green-dark);margin-top:10px;" id="scan-done-title">Items saved!</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:6px;" id="scan-done-sub"></div>
+      <div style="display:flex;gap:8px;margin-top:18px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="resetScan()">Import more</button>
+        <button class="btn btn-primary btn-sm" style="flex:1;" onclick="switchView('history')">View history</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA LAYER ───────────────────────────────────────────────────────────────
+const SEED = [{"product":"Absolute","brand":"Absolute","category":"Beverages","unitPrice":25.0,"lineTotal":25.0,"quantity":1.0,"size":"DS11000","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"GainPlus","brand":"Similac","category":"Baby / Nutrition","unitPrice":4279.5,"lineTotal":4279.5,"quantity":1.0,"size":"","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Calamansi","brand":"","category":"Produce","unitPrice":116.0,"lineTotal":27.26,"quantity":0.235,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Garlic","brand":"","category":"Produce","unitPrice":154.0,"lineTotal":56.98,"quantity":0.37,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Red Onion","brand":"","category":"Produce","unitPrice":98.0,"lineTotal":45.08,"quantity":0.46,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Sayote","brand":"","category":"Produce","unitPrice":40.0,"lineTotal":39.6,"quantity":0.99,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Flax Seeds","brand":"","category":"Produce","unitPrice":364.0,"lineTotal":131.77,"quantity":0.362,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Native Labuyo","brand":"","category":"Produce","unitPrice":190.0,"lineTotal":14.25,"quantity":0.075,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Surf","brand":"Surf","category":"Household","unitPrice":306.75,"lineTotal":306.75,"quantity":1.0,"size":"2.5L","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Toothpaste","brand":"","category":"Personal Care","unitPrice":79.75,"lineTotal":79.75,"quantity":1.0,"size":"40g","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Fabric Softener","brand":"Downy","category":"Laundry","unitPrice":106.75,"lineTotal":106.75,"quantity":1.0,"size":"Fresh 6+1","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Fiber Wheat","brand":"","category":"Breakfast / Dairy","unitPrice":107.75,"lineTotal":107.75,"quantity":1.0,"size":"","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Milk","brand":"Monde","category":"Breakfast / Dairy","unitPrice":77.0,"lineTotal":77.0,"quantity":1.0,"size":"400g","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Gatsby","brand":"Gatsby","category":"Personal Care","unitPrice":199.75,"lineTotal":199.75,"quantity":1.0,"size":"","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Steak","brand":"Smart DWP","category":"Meat","unitPrice":55.5,"lineTotal":55.5,"quantity":1.0,"size":"1200g","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Cfree","brand":"Cfree","category":"Beverages","unitPrice":94.75,"lineTotal":94.75,"quantity":1.0,"size":"","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"All Nite","brand":"Sisters","category":"Personal Care","unitPrice":68.75,"lineTotal":68.75,"quantity":1.0,"size":"10 x 2","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Medium Eggs","brand":"Bounty","category":"Eggs","unitPrice":128.0,"lineTotal":128.0,"quantity":1.0,"size":"12s","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Bangus Boneless","brand":"","category":"Seafood","unitPrice":380.0,"lineTotal":463.6,"quantity":1.22,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Suahe","brand":"","category":"Seafood","unitPrice":499.0,"lineTotal":132.73,"quantity":0.266,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Chicken Wings","brand":"MAG","category":"Meat","unitPrice":285.0,"lineTotal":505.88,"quantity":1.775,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"TJ Hotdog","brand":"PF","category":"Meat","unitPrice":199.0,"lineTotal":199.0,"quantity":1.0,"size":"1kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Chicken Cut","brand":"MAG","category":"Meat","unitPrice":268.0,"lineTotal":191.62,"quantity":0.715,"size":"kg","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Rite Lite Lemon","brand":"Rite Lite","category":"Beverages","unitPrice":57.0,"lineTotal":57.0,"quantity":1.0,"size":"250ml","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Milk","brand":"Milk Magic","category":"Dairy / Milk","unitPrice":98.5,"lineTotal":98.5,"quantity":1.0,"size":"1L","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Sprite","brand":"Sprite","category":"Beverages","unitPrice":38.0,"lineTotal":38.0,"quantity":1.0,"size":"320ml","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Tuna","brand":"San Marino","category":"Canned / Packaged Food","unitPrice":39.0,"lineTotal":39.0,"quantity":1.0,"size":"150g","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Condensed Milk","brand":"Alaska","category":"Dairy / Milk","unitPrice":52.95,"lineTotal":52.95,"quantity":1.0,"size":"290ml","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Meat","brand":"PF","category":"Meat","unitPrice":98.0,"lineTotal":98.0,"quantity":1.0,"size":"230g","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Other items (unrecorded)","brand":"","category":"Other","unitPrice":1142.95,"lineTotal":1142.95,"quantity":1.0,"size":"","store":"Savemore Light Residences","receipt":"Receipt 1","date":"2026-08-09"},{"product":"Can Opener","brand":"","category":"Kitchen / Household","unitPrice":129.0,"lineTotal":129.0,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Laundry Product","brand":"Blest","category":"Household","unitPrice":109.0,"lineTotal":218.0,"quantity":2.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Tumbler","brand":"KHTUMBLER","category":"Kitchen / Household","unitPrice":149.0,"lineTotal":149.0,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Embossed Mug","brand":"","category":"Kitchen / Household","unitPrice":59.0,"lineTotal":118.0,"quantity":2.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Kinder Joy Limited","brand":"Kinder Joy","category":"Personal Care / Baby","unitPrice":66.5,"lineTotal":66.5,"quantity":1.0,"size":"20g","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Piccadelli","brand":"","category":"Personal Care","unitPrice":10.0,"lineTotal":30.0,"quantity":3.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Colgate","brand":"Colgate","category":"Personal Care","unitPrice":165.0,"lineTotal":165.0,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Broccoli Local","brand":"","category":"Produce","unitPrice":307.0,"lineTotal":116.66,"quantity":0.38,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Sili Sisang","brand":"","category":"Produce","unitPrice":122.0,"lineTotal":30.5,"quantity":0.25,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Gabi Native","brand":"","category":"Produce","unitPrice":116.0,"lineTotal":52.2,"quantity":0.45,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Carrots Jumbo","brand":"","category":"Produce","unitPrice":165.0,"lineTotal":71.78,"quantity":0.435,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Oyster Sauce","brand":"Mama Sita's","category":"Sauces / Seasoning","unitPrice":73.0,"lineTotal":73.0,"quantity":1.0,"size":"30g x 12","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Eggplant Baby","brand":"","category":"Produce","unitPrice":122.0,"lineTotal":45.14,"quantity":0.37,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Cane Vinegar","brand":"SS","category":"Beverages","unitPrice":20.5,"lineTotal":20.5,"quantity":1.0,"size":"385ml","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Kangkong","brand":"","category":"Produce","unitPrice":54.0,"lineTotal":20.52,"quantity":0.38,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Medium Eggs","brand":"Bounty","category":"Eggs","unitPrice":128.0,"lineTotal":128.0,"quantity":1.0,"size":"12s","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Chicken Wings","brand":"SMB","category":"Meat","unitPrice":190.0,"lineTotal":309.7,"quantity":1.63,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Tuna Belly","brand":"SMI","category":"Seafood","unitPrice":538.0,"lineTotal":390.05,"quantity":0.725,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Chicken Thigh","brand":"MAG","category":"Meat","unitPrice":288.0,"lineTotal":105.12,"quantity":0.365,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Chicken Breast Fillet","brand":"MAG","category":"Meat","unitPrice":338.0,"lineTotal":98.02,"quantity":0.29,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Pork Cubes","brand":"SMB","category":"Meat","unitPrice":305.0,"lineTotal":88.45,"quantity":0.29,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Pork Adobo Cut","brand":"SMB","category":"Meat","unitPrice":299.0,"lineTotal":95.68,"quantity":0.32,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Tomato Native","brand":"","category":"Produce","unitPrice":120.0,"lineTotal":61.8,"quantity":0.515,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Cabbage","brand":"","category":"Produce","unitPrice":82.0,"lineTotal":31.98,"quantity":0.39,"size":"kg","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Evaporated Milk","brand":"Alaska","category":"Dairy / Milk","unitPrice":35.95,"lineTotal":35.95,"quantity":1.0,"size":"360ml","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Tuna Drink","brand":"GT3","category":"Beverages","unitPrice":61.0,"lineTotal":61.0,"quantity":1.0,"size":"1L","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Soy Milk","brand":"VitaSoy","category":"Dairy / Milk","unitPrice":54.75,"lineTotal":54.75,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Spanish Sardines","brand":"San Marino","category":"Canned / Packaged Food","unitPrice":39.0,"lineTotal":39.0,"quantity":1.0,"size":"150g","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Pineapple Juice","brand":"DM","category":"Beverages","unitPrice":29.75,"lineTotal":119.0,"quantity":4.0,"size":"220ml","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Elbow Macaroni","brand":"UKF","category":"Pasta / Dry Goods","unitPrice":48.0,"lineTotal":48.0,"quantity":1.0,"size":"400g","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"ChisBites","brand":"MARBY","category":"Processed Food","unitPrice":46.0,"lineTotal":46.0,"quantity":1.0,"size":"110g","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Cranberry","brand":"GARDENIA","category":"Breakfast / Snacks","unitPrice":102.25,"lineTotal":204.5,"quantity":2.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Hop ia","brand":"MARBY","category":"Bakery / Snacks","unitPrice":138.5,"lineTotal":138.5,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Fabric Conditioner","brand":"DelFab","category":"Laundry","unitPrice":164.75,"lineTotal":164.75,"quantity":1.0,"size":"1L","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Sunrise","brand":"Downy","category":"Laundry","unitPrice":106.75,"lineTotal":106.75,"quantity":1.0,"size":"75ml x 6s","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Powder Detergent","brand":"Ariel","category":"Laundry","unitPrice":129.75,"lineTotal":129.75,"quantity":1.0,"size":"DP SF 390 x 6s","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"},{"product":"Other items (unrecorded)","brand":"","category":"Other","unitPrice":242.53,"lineTotal":242.53,"quantity":1.0,"size":"","store":"SM Hypermarket - SM Center Congressional","receipt":"Receipt 2","date":"2026-08-13"}];
+
+// State
+let db = { sessions: [], items: [] };
+let currentSessionId = null;
+let editItemId = null;
+let schedDays = 7;
+let activeCat = 'All';
+
+const ICONS = { 'Produce':'🥦','Meat':'🥩','Seafood':'🐟','Dairy / Milk':'🥛','Eggs':'🥚','Beverages':'🧃','Baby / Nutrition':'🍼','Household':'🧹','Laundry':'🧺','Personal Care':'🪥','Sauces / Seasoning':'🫙','Spices / Seasoning':'🌶️','Cooking':'🫕','Baking':'🫓','Snacks':'🍿','Canned / Packaged Food':'🥫','Breakfast / Dairy':'🥣','Kitchen / Household':'🍳','Pasta / Dry Goods':'🍝','Other':'📦', 'Processed Food':'🏭', 'Bakery / Snacks':'🥐', 'Breakfast / Snacks':'🥞', 'Personal Care / Baby':'👶', 'Household / Electronics':'🔌' };
+
+function icon(cat) { return ICONS[cat] || '🛒'; }
+function peso(n) { return '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function save() { try { localStorage.setItem('tindahan_db', JSON.stringify(db)); } catch(e){} }
+function showResetConfirm() {
+  document.getElementById('reset-confirm-bar').style.display = 'block';
+}
+function cancelReset() {
+  document.getElementById('reset-confirm-bar').style.display = 'none';
+}
+function confirmReset() {
+  localStorage.removeItem('tindahan_db');
+  db = { sessions: [], items: [] };
+  load();
+  initWeekOffset();
+  document.getElementById('reset-confirm-bar').style.display = 'none';
+  renderAll();
+  toast('Data restored to original');
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('tindahan_db');
+    if (raw) { db = JSON.parse(raw); return; }
+  } catch(e){}
+  // Seed from upload data
+  const sessMap = {};
+  SEED.forEach(r => {
+    const key = r.receipt + '|' + r.store + '|' + r.date;
+    if (!sessMap[key]) {
+      sessMap[key] = { id: uid(), date: r.date, store: r.store, receipt: r.receipt, manualTotal: null };
+      db.sessions.push(sessMap[key]);
+    }
+    db.items.push({ id: uid(), sessionId: sessMap[key].id, product: r.product, brand: r.brand, category: r.category, unitPrice: r.unitPrice, lineTotal: r.lineTotal, quantity: r.quantity, size: r.size });
+  });
+  // Set manual totals for known receipts
+  const s1 = db.sessions.find(s => s.receipt === 'Receipt 1');
+  if (s1) { s1.manualTotal = 8863.42; s1.date = '2026-08-09'; s1.store = 'Savemore Light Residences'; }
+  const s2 = db.sessions.find(s => s.receipt === 'Receipt 2');
+  if (s2) { s2.manualTotal = 4005.08; s2.date = '2026-08-13'; }
+  db.sessions.sort((a,b) => b.date.localeCompare(a.date));
+  save();
+}
+
+// ─── SESSIONS ────────────────────────────────────────────────────────────────
+function sessionTotal(sid) {
+  return db.items.filter(i => i.sessionId === sid).reduce((s,i) => s + i.lineTotal, 0);
+}
+
+function openSession(sid) {
+  currentSessionId = sid;
+  const s = db.sessions.find(x => x.id === sid);
+  document.getElementById('detail-title').textContent = s.store || 'Unknown Store';
+  document.getElementById('detail-subtitle').textContent = s.date + ' · ' + (s.receipt || '');
+  document.getElementById('delete-confirm-bar').style.display = 'none';
+  document.getElementById('delete-session-btn').style.display = '';
+  renderDetailItems();
+  openModal('detail-modal');
+}
+
+function renderDetailItems() {
+  const items = db.items.filter(i => i.sessionId === currentSessionId);
+  const el = document.getElementById('detail-items');
+  const tot = items.reduce((s,i) => s + i.lineTotal, 0);
+  document.getElementById('detail-total').textContent = peso(tot);
+  if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">No items yet</div><p style="font-size:13px;">Tap "+ Add item" to start</p></div>'; return; }
+  el.innerHTML = items.map(i => `
+    <div class="item-row">
+      <div class="item-icon">${icon(i.category)}</div>
+      <div class="item-info">
+        <div class="item-name">${i.product}</div>
+        <div class="item-meta">${[i.brand, i.size, 'x'+Number(i.quantity).toFixed(i.quantity%1?3:0)].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="item-price">${peso(i.lineTotal)}</div>
+        <div style="font-size:11px;color:var(--text-3);">${peso(i.unitPrice)}/unit</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn-icon danger" onclick="deleteItem('${i.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function deleteItem(id) {
+  db.items = db.items.filter(i => i.id !== id);
+  save(); renderDetailItems(); renderAll();
+}
+
+function showDeleteConfirm() {
+  document.getElementById('delete-confirm-bar').style.display = 'block';
+  document.getElementById('delete-session-btn').style.display = 'none';
+}
+function cancelDeleteConfirm() {
+  document.getElementById('delete-confirm-bar').style.display = 'none';
+  document.getElementById('delete-session-btn').style.display = '';
+}
+function confirmDeleteSession() {
+  db.items = db.items.filter(i => i.sessionId !== currentSessionId);
+  db.sessions = db.sessions.filter(s => s.id !== currentSessionId);
+  save(); closeModal('detail-modal'); renderAll(); toast('Session deleted');
+  document.getElementById('delete-confirm-bar').style.display = 'none';
+  document.getElementById('delete-session-btn').style.display = '';
+}
+
+function renderSessionCard(s) {
+  const tot = sessionTotal(s.id);
+  const cnt = db.items.filter(i => i.sessionId === s.id).length;
+  return `<div class="item-row" onclick="openSession('${s.id}')" style="cursor:pointer;">
+    <div class="item-icon">🛒</div>
+    <div class="item-info">
+      <div class="item-name">${s.store || 'Unknown Store'}</div>
+      <div class="item-meta">${s.date} · ${cnt} items${s.receipt ? ' · ' + s.receipt : ''}</div>
+    </div>
+    <div class="item-price">${peso(tot)}</div>
+  </div>`;
+}
+
+// ─── WEEKLY DASHBOARD STATE ────────────────────────────────────────────────────
+let dashWeekOffset = 0;
+
+function initWeekOffset() {
+  if (!db.sessions.length) { dashWeekOffset = 0; return; }
+  const latestDate = db.sessions.map(s => s.date).sort().reverse()[0];
+  const d = new Date(latestDate + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayDay = (today.getDay() + 6) % 7;
+  const todayMon = new Date(today); todayMon.setDate(today.getDate() - todayDay);
+  const dDay = (d.getDay() + 6) % 7;
+  const dMon = new Date(d); dMon.setDate(d.getDate() - dDay);
+  const diffWeeks = Math.round((todayMon - dMon) / (7 * 24 * 3600 * 1000));
+  dashWeekOffset = -diffWeeks;
+}
+let trendWeeks = 8;
+let catScope = 'week';
+
+function getWeekBounds(offset) {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7) + offset * 7);
+  monday.setHours(0,0,0,0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23,59,59,999);
+  return { monday, sunday };
+}
+
+function dateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+function fmt(d) {
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
+function itemsInRange(monday, sunday) {
+  const sessIds = db.sessions
+    .filter(s => s.date >= dateStr(monday) && s.date <= dateStr(sunday))
+    .map(s => s.id);
+  return db.items.filter(i => sessIds.includes(i.sessionId));
+}
+
+function sessionsInRange(monday, sunday) {
+  return db.sessions.filter(s => s.date >= dateStr(monday) && s.date <= dateStr(sunday));
+}
+
+function shiftWeek(dir) {
+  const next = dashWeekOffset + dir;
+  if (next > 0) return; // no future weeks
+  dashWeekOffset = next;
+  renderDashboard();
+}
+
+function setTrendWeeks(n) {
+  trendWeeks = n;
+  [4,8,12].forEach(w => {
+    const el = document.getElementById('trend-btn-' + w);
+    if (el) el.classList.toggle('active', w === n);
+  });
+  renderTrendChart();
+}
+
+function setCatScope(scope) {
+  catScope = scope;
+  document.getElementById('cat-scope-week')?.classList.toggle('active', scope === 'week');
+  document.getElementById('cat-scope-all')?.classList.toggle('active', scope === 'all');
+  renderCatBreakdown();
+}
+
+const CAT_COLORS = {
+  'Meat':'#eb6834','Seafood':'#1baf7a','Produce':'#2a9d8f','Dairy / Milk':'#4a90d9',
+  'Eggs':'#f4a261','Beverages':'#457b9d','Baby / Nutrition':'#e9c46a',
+  'Household':'#6d6875','Laundry':'#8ecae6','Personal Care':'#a8dadc',
+  'Sauces / Seasoning':'#c77dff','Spices / Seasoning':'#e76f51','Cooking':'#2a78d6',
+  'Baking':'#f2cc8f','Snacks':'#fb8500','Breakfast / Dairy':'#ffb703',
+  'Canned / Packaged Food':'#606c38','Kitchen / Household':'#8d99ae',
+  'Pasta / Dry Goods':'#b5838d','Other':'#adb5bd'
+};
+function catColor(cat) { return CAT_COLORS[cat] || '#888'; }
+
+function renderDashboard() {
+  const { monday, sunday } = getWeekBounds(dashWeekOffset);
+  const { monday: prevMon, sunday: prevSun } = getWeekBounds(dashWeekOffset - 1);
+
+  // Week range label
+  document.getElementById('dash-week-range').textContent = fmt(monday) + ' – ' + fmt(sunday);
+  document.getElementById('dash-week-label').textContent =
+    dashWeekOffset === 0 ? 'Current week' : dashWeekOffset === -1 ? 'Last week' : `${Math.abs(dashWeekOffset)} weeks ago`;
+  const nextBtn = document.getElementById('week-next-btn');
+  if (nextBtn) { nextBtn.disabled = dashWeekOffset >= 0; nextBtn.style.opacity = dashWeekOffset >= 0 ? '0.35' : '1'; }
+
+  // KPIs
+  const weekItems = itemsInRange(monday, sunday);
+  const prevItems = itemsInRange(prevMon, prevSun);
+  const weekSpend = weekItems.reduce((s,i) => s + i.lineTotal, 0);
+  const prevSpend = prevItems.reduce((s,i) => s + i.lineTotal, 0);
+  const weekSess  = sessionsInRange(monday, sunday);
+  document.getElementById('dash-week-spend').textContent = peso(weekSpend);
+  document.getElementById('dash-week-sessions').textContent = weekSess.length;
+  document.getElementById('dash-week-items').textContent = weekItems.length + ' items';
+
+  if (prevSpend > 0) {
+    const diff = weekSpend - prevSpend;
+    const pct  = Math.round(Math.abs(diff) / prevSpend * 100);
+    const el   = document.getElementById('dash-week-vs');
+    el.textContent = (diff >= 0 ? '▲ ' : '▼ ') + pct + '% vs prior week';
+    el.style.color = diff > 0 ? 'var(--red)' : 'var(--green)';
+  } else {
+    document.getElementById('dash-week-vs').textContent = 'No prior week data';
+  }
+
+  // Estimate
+  const est = computeEstimate();
+  document.getElementById('dash-est').textContent = peso(est.grand);
+
+  // Charts
+  renderTrendChart();
+  renderCatBreakdown();
+  renderTopItems(weekItems);
+
+  // Recent sessions
+  const recent = [...db.sessions].sort((a,b) => b.date.localeCompare(a.date)).slice(0,3);
+  document.getElementById('recent-sessions').innerHTML = recent.length
+    ? recent.map(renderSessionCard).join('')
+    : '<div class="empty"><div class="empty-icon">🛒</div><div class="empty-title">No sessions yet</div><p style="font-size:13px;">Tap + to add your first grocery run</p></div>';
+}
+
+function renderTrendChart() {
+  const chartEl = document.getElementById('dash-trend-chart');
+  const labelEl = document.getElementById('dash-trend-labels');
+  if (!chartEl) return;
+
+  // Each bucket = one week's spend (not cumulative)
+  const buckets = [];
+  for (let w = trendWeeks - 1; w >= 0; w--) {
+    const offset = dashWeekOffset - w;
+    const { monday, sunday } = getWeekBounds(offset);
+    const weekItems = itemsInRange(monday, sunday);
+    const spend = weekItems.reduce((s, i) => s + i.lineTotal, 0);
+    const isCurrent = (offset === dashWeekOffset);
+    buckets.push({ monday, sunday, spend, isCurrent, hasData: spend > 0 });
+  }
+
+  const maxSpend = Math.max(...buckets.map(b => b.spend), 1);
+
+  chartEl.innerHTML = buckets.map((b, idx) => {
+    const h = b.hasData ? Math.max(6, Math.round((b.spend / maxSpend) * 74)) : 0;
+    const color = b.isCurrent ? 'var(--green-mid)' : b.hasData ? '#a8d5b5' : 'transparent';
+    const border = b.hasData ? 'none' : '1px dashed #d0ddd4';
+    const label = b.hasData ? peso(b.spend) : '';
+    const prevSpend = idx > 0 ? buckets[idx-1].spend : null;
+    let changeHtml = '';
+    if (b.hasData && prevSpend !== null && prevSpend > 0) {
+      const pct = Math.round(Math.abs(b.spend - prevSpend) / prevSpend * 100);
+      const up = b.spend > prevSpend;
+      changeHtml = `<div style="font-size:9px;color:${up ? '#d03b3b' : '#1a7a4a'};font-weight:700;line-height:1;">${up ? '▲' : '▼'}${pct}%</div>`;
+    }
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:90px;cursor:default;position:relative;" title="${fmt(b.monday)} – ${fmt(b.sunday)}: ${b.hasData ? peso(b.spend) : 'No data'}">
+      ${changeHtml}
+      <div style="font-size:9px;color:var(--green-dark);margin-bottom:2px;font-weight:700;text-align:center;line-height:1.2;">${label ? '₱'+Math.round(b.spend).toLocaleString() : ''}</div>
+      <div style="width:85%;background:${color};border:${border};border-radius:4px 4px 0 0;height:${h > 0 ? h : 4}px;transition:height .3s;box-sizing:border-box;"></div>
+    </div>`;
+  }).join('');
+
+  const step = trendWeeks <= 6 ? 1 : 2;
+  labelEl.innerHTML = buckets.map((b, i) => {
+    const show = i % step === 0 || i === buckets.length - 1;
+    return `<div style="flex:1;text-align:center;font-size:9px;color:var(--text-3);white-space:nowrap;overflow:hidden;padding:0 1px;">${show ? fmt(b.monday) : ''}</div>`;
+  }).join('');
+}
+
+function renderCatBreakdown() {
+  const el = document.getElementById('dash-cat-breakdown');
+  const subEl = document.getElementById('cat-scope-sub');
+  if (!el) return;
+
+  let items;
+  if (catScope === 'week') {
+    const { monday, sunday } = getWeekBounds(dashWeekOffset);
+    items = itemsInRange(monday, sunday);
+    subEl.textContent = items.length + ' items this week';
+  } else {
+    items = db.items;
+    subEl.textContent = items.length + ' items all time';
+  }
+
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-3);font-size:13px;">No data for this period</div>';
+    return;
+  }
+
+  // Aggregate by category
+  const catMap = {};
+  items.forEach(i => {
+    catMap[i.category] = (catMap[i.category] || 0) + i.lineTotal;
+  });
+  const total = items.reduce((s,i) => s + i.lineTotal, 0);
+  const cats = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+
+  // Donut-style percentage bar at top
+  const topCats = cats.slice(0, 6);
+  const otherSpend = cats.slice(6).reduce((s,c) => s + c[1], 0);
+  const donutCats = otherSpend > 0 ? [...topCats, ['Other categories', otherSpend]] : topCats;
+
+  const segments = donutCats.map(([cat, spend]) => {
+    const pct = (spend / total * 100).toFixed(1);
+    return `<div style="flex:${pct};background:${catColor(cat)};height:100%;min-width:2px;" title="${cat}: ${peso(spend)} (${pct}%)"></div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;height:12px;border-radius:99px;overflow:hidden;margin-bottom:16px;gap:2px;">
+      ${segments}
+    </div>
+    ${cats.map(([cat, spend]) => {
+      const pct = (spend / total * 100).toFixed(1);
+      const barW = Math.round(spend / total * 100);
+      return `<div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <div style="width:10px;height:10px;border-radius:3px;background:${catColor(cat)};flex-shrink:0;"></div>
+            <span style="font-size:13px;font-weight:500;">${icon(cat)} ${cat}</span>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:13px;font-weight:700;color:var(--green-dark);">${peso(spend)}</span>
+            <span style="font-size:11px;color:var(--text-3);margin-left:6px;">${pct}%</span>
+          </div>
+        </div>
+        <div style="background:#e8efe9;border-radius:99px;height:6px;overflow:hidden;">
+          <div style="width:${barW}%;height:100%;border-radius:99px;background:${catColor(cat)};transition:width .4s;"></div>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function renderTopItems(weekItems) {
+  const topEl = document.getElementById('dash-top-items');
+  const titleEl = document.getElementById('dash-top-title');
+  if (!topEl) return;
+
+  // Aggregate by product
+  const prodMap = {};
+  weekItems.forEach(i => {
+    const key = i.product.toLowerCase();
+    if (!prodMap[key]) prodMap[key] = { product: i.product, category: i.category, total: 0, qty: 0 };
+    prodMap[key].total += i.lineTotal;
+    prodMap[key].qty += i.quantity;
+  });
+
+  const top = Object.values(prodMap).sort((a,b) => b.total - a.total).slice(0, 5);
+  titleEl.textContent = dashWeekOffset === 0 ? 'Top items this week' : 'Top items that week';
+
+  if (!top.length) {
+    topEl.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No items this week</div><p style="font-size:13px;">Navigate to a week with purchases</p></div>';
+    return;
+  }
+
+  const maxTotal = top[0].total;
+  topEl.innerHTML = top.map((p, idx) => `
+    <div class="item-row" style="gap:12px;">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--green-dark);flex-shrink:0;">${idx+1}</div>
+      <div class="item-icon" style="width:32px;height:32px;">${icon(p.category)}</div>
+      <div class="item-info">
+        <div class="item-name" style="font-size:13px;">${p.product}</div>
+        <div style="background:#e8efe9;border-radius:99px;height:4px;margin-top:5px;overflow:hidden;">
+          <div style="width:${Math.round(p.total/maxTotal*100)}%;height:100%;border-radius:99px;background:var(--green-mid);"></div>
+        </div>
+      </div>
+      <div class="item-price" style="font-size:13px;">${peso(p.total)}</div>
+    </div>`).join('');
+}
+
+function renderHistory() {
+  const sorted = [...db.sessions].sort((a,b) => b.date.localeCompare(a.date));
+  const el = document.getElementById('all-sessions-list');
+  if (!sorted.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><div class="empty-title">No sessions</div></div>'; return; }
+  el.innerHTML = sorted.map(s => {
+    const tot = sessionTotal(s.id);
+    const cnt = db.items.filter(i => i.sessionId === s.id).length;
+    return `<div class="receipt-header" onclick="openSession('${s.id}')">
+      <div>
+        <div class="receipt-header-info">${s.store || 'Unknown'}</div>
+        <div class="receipt-header-sub">${s.date} · ${cnt} items · ${s.receipt||''}</div>
+      </div>
+      <div class="receipt-header-total">${peso(tot)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── PRODUCTS VIEW ────────────────────────────────────────────────────────────
+function renderProducts() {
+  const q = document.getElementById('product-search').value.toLowerCase();
+  const cats = ['All', ...new Set(db.items.map(i => i.category))].sort();
+  const chipEl = document.getElementById('cat-chips');
+  chipEl.innerHTML = cats.map(c => `<div class="chip ${activeCat===c?'active':''}" onclick="setActiveCat('${c}')">${c}</div>`).join('');
+
+  // Aggregate by product+category
+  const map = {};
+  db.items.forEach(i => {
+    const key = i.product.toLowerCase() + '|' + i.category;
+    if (!map[key]) map[key] = { product: i.product, brand: i.brand, category: i.category, prices: [], size: i.size };
+    map[key].prices.push({ price: i.unitPrice, date: db.sessions.find(s => s.id === i.sessionId)?.date || '' });
+  });
+
+  let rows = Object.values(map);
+  if (activeCat !== 'All') rows = rows.filter(r => r.category === activeCat);
+  if (q) rows = rows.filter(r => r.product.toLowerCase().includes(q) || r.brand.toLowerCase().includes(q));
+  rows.sort((a,b) => a.product.localeCompare(b.product));
+
+  const el = document.getElementById('product-list');
+  if (!rows.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">No products found</div></div>'; return; }
+  el.innerHTML = rows.map(r => {
+    const prices = r.prices.sort((a,b) => a.date.localeCompare(b.date));
+    const latest = prices[prices.length-1].price;
+    const prev = prices.length > 1 ? prices[prices.length-2].price : null;
+    let trendHtml = '';
+    if (prev !== null) {
+      const diff = latest - prev;
+      if (diff > 0.5) trendHtml = `<span class="price-trend up">▲ ${peso(diff)}</span>`;
+      else if (diff < -0.5) trendHtml = `<span class="price-trend down">▼ ${peso(Math.abs(diff))}</span>`;
+      else trendHtml = `<span class="price-trend flat">— stable</span>`;
+    }
+    return `<div class="item-row">
+      <div class="item-icon">${icon(r.category)}</div>
+      <div class="item-info">
+        <div class="item-name">${r.product}</div>
+        <div class="item-meta">${[r.brand, r.size].filter(Boolean).join(' · ')} · ${r.prices.length}× purchased</div>
+        <div style="margin-top:3px;">${trendHtml}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="item-price">${peso(latest)}</div>
+        <div style="margin-top:2px;"><span class="badge badge-gray">${r.category}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setActiveCat(c) { activeCat = c; renderProducts(); }
+
+// ─── ESTIMATE ─────────────────────────────────────────────────────────────────
+function computeEstimate() {
+  const bufferEl = document.getElementById('buffer-range');
+  const buffer = parseInt(bufferEl ? bufferEl.value : 10) / 100;
+  // For each unique product, get avg unit price and avg quantity from most recent sessions
+  const map = {};
+  db.items.forEach(i => {
+    const key = i.product.toLowerCase() + '|' + i.category;
+    if (!map[key]) map[key] = { product: i.product, brand: i.brand, category: i.category, entries: [] };
+    const sess = db.sessions.find(s => s.id === i.sessionId);
+    map[key].entries.push({ unitPrice: i.unitPrice, quantity: i.quantity, lineTotal: i.lineTotal, date: sess?.date || '' });
+  });
+
+  let rows = [];
+  let grand = 0;
+  Object.values(map).forEach(p => {
+    const sorted = p.entries.sort((a,b) => b.date.localeCompare(a.date));
+    const recent = sorted.slice(0, Math.min(3, sorted.length));
+    const avgPrice = recent.reduce((s,e) => s + e.unitPrice, 0) / recent.length;
+    const avgQty = recent.reduce((s,e) => s + e.quantity, 0) / recent.length;
+    const base = avgPrice * avgQty;
+    const withBuffer = base * (1 + buffer);
+    grand += withBuffer;
+    rows.push({ product: p.product, brand: p.brand, category: p.category, avgPrice, avgQty, base, withBuffer, occurrences: p.entries.length });
+  });
+  rows.sort((a,b) => b.withBuffer - a.withBuffer);
+  return { grand, rows, count: rows.length };
+}
+
+function updateEstimate() {
+  const val = document.getElementById('buffer-range').value;
+  document.getElementById('buffer-label').textContent = val + '%';
+  renderEstimate();
+}
+
+function selectSchedule(el, days) {
+  schedDays = days;
+  document.querySelectorAll('.schedule-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  renderEstimate();
+}
+
+function renderEstimate() {
+  const est = computeEstimate();
+  document.getElementById('est-grand-total').textContent = peso(est.grand);
+  document.getElementById('est-subtitle').textContent = est.count + ' unique products from your history';
+
+  const top = est.rows.slice(0, 15);
+  document.getElementById('est-rows').innerHTML = top.map(r => `
+    <div class="est-row">
+      <span class="est-label">${icon(r.category)} ${r.product}${r.brand ? ' ('+r.brand+')' : ''}</span>
+      <span class="est-val">${peso(r.withBuffer)}</span>
+    </div>`).join('') +
+    (est.rows.length > 15 ? `<div class="est-row"><span class="est-label">…and ${est.rows.length - 15} more products</span><span class="est-val" style="color:var(--text-3);">${peso(est.rows.slice(15).reduce((s,r)=>s+r.withBuffer,0))}</span></div>` : '');
+
+  // Category bars
+  const catTotals = {};
+  est.rows.forEach(r => { catTotals[r.category] = (catTotals[r.category]||0) + r.withBuffer; });
+  const catArr = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max = catArr[0]?.[1] || 1;
+  document.getElementById('cat-bars').innerHTML = catArr.map(([cat, amt]) => `
+    <div class="hbar-row">
+      <div class="hbar-label">${icon(cat)} ${cat}</div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${(amt/max*100).toFixed(1)}%"></div></div>
+      <div class="hbar-val">${peso(amt)}</div>
+    </div>`).join('');
+
+  renderPriceHistory();
+}
+
+function renderPriceHistory() {
+  const q = (document.getElementById('est-search')?.value || '').toLowerCase();
+  const map = {};
+  db.items.forEach(i => {
+    const key = i.product.toLowerCase() + '|' + i.category;
+    if (!map[key]) map[key] = { product: i.product, brand: i.brand, category: i.category, entries: [] };
+    const sess = db.sessions.find(s => s.id === i.sessionId);
+    map[key].entries.push({ unitPrice: i.unitPrice, date: sess?.date || '' });
+  });
+  let rows = Object.values(map).filter(p => !q || p.product.toLowerCase().includes(q));
+  rows.sort((a,b) => a.product.localeCompare(b.product));
+
+  document.getElementById('price-history-list').innerHTML = rows.map(p => {
+    const sorted = p.entries.sort((a,b) => a.date.localeCompare(b.date));
+    const prices = sorted.map(e => peso(e.unitPrice) + ' (' + e.date + ')');
+    const latest = sorted[sorted.length-1].unitPrice;
+    const first = sorted[0].unitPrice;
+    const diff = latest - first;
+    let trendHtml = diff > 0.5 ? `<span class="price-trend up">▲ ${peso(diff)} from first recorded</span>` : diff < -0.5 ? `<span class="price-trend down">▼ ${peso(Math.abs(diff))} from first recorded</span>` : `<span class="price-trend flat">— price stable</span>`;
+    return `<div class="item-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <div class="item-icon">${icon(p.category)}</div>
+        <div class="item-info"><div class="item-name">${p.product}</div><div class="item-meta">${p.brand||'—'} · ${p.category}</div></div>
+        <div class="item-price">${peso(latest)}</div>
+      </div>
+      <div style="padding-left:46px;font-size:12px;color:var(--text-3);">${trendHtml}</div>
+      <div style="padding-left:46px;" class="tag-row">${prices.map(pr=>`<span class="tag">${pr}</span>`).join('')}</div>
+    </div>`;
+  }).join('') || '<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">No history yet</div></div>';
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openAddSession() {
+  document.getElementById('session-modal-title').textContent = 'New grocery session';
+  document.getElementById('s-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('s-store').value = '';
+  document.getElementById('s-receipt').value = 'Receipt ' + (db.sessions.length + 1);
+  document.getElementById('s-total').value = '';
+  // Populate store datalist
+  const stores = [...new Set(db.sessions.map(s => s.store).filter(Boolean))];
+  document.getElementById('store-suggestions').innerHTML = stores.map(s => `<option value="${s}">`).join('');
+  openModal('session-modal');
+}
+
+function saveSession() {
+  const date = document.getElementById('s-date').value;
+  const store = document.getElementById('s-store').value.trim() || 'Unknown Store';
+  const receipt = document.getElementById('s-receipt').value.trim();
+  const manualTotal = parseFloat(document.getElementById('s-total').value) || null;
+  if (!date) { alert('Please select a date.'); return; }
+  const id = uid();
+  db.sessions.unshift({ id, date, store, receipt, manualTotal });
+  save(); closeModal('session-modal');
+  currentSessionId = id;
+  document.getElementById('detail-title').textContent = store;
+  document.getElementById('detail-subtitle').textContent = date + ' · ' + receipt;
+  renderDetailItems();
+  openModal('detail-modal');
+  renderAll(); toast('Session created');
+}
+
+function openAddItem() {
+  editItemId = null;
+  document.getElementById('item-modal-title').textContent = 'Add item';
+  document.getElementById('i-product').value = '';
+  document.getElementById('i-brand').value = '';
+  document.getElementById('i-category').value = 'Produce';
+  document.getElementById('i-price').value = '';
+  document.getElementById('i-qty').value = '1';
+  document.getElementById('i-size').value = '';
+  document.getElementById('i-total').value = '';
+  // Datalist
+  const products = [...new Set(db.items.map(i => i.product))].sort();
+  document.getElementById('product-suggestions').innerHTML = products.map(p => `<option value="${p}">`).join('');
+  closeModal('detail-modal');
+  openModal('item-modal');
+}
+
+function autofillProduct() {
+  const name = document.getElementById('i-product').value.toLowerCase();
+  const match = db.items.find(i => i.product.toLowerCase() === name);
+  if (match) {
+    document.getElementById('i-brand').value = match.brand || '';
+    document.getElementById('i-category').value = match.category || 'Other';
+    document.getElementById('i-size').value = match.size || '';
+    document.getElementById('i-price').value = match.unitPrice;
+    calcTotal();
+  }
+}
+
+function calcTotal() {
+  const p = parseFloat(document.getElementById('i-price').value) || 0;
+  const q = parseFloat(document.getElementById('i-qty').value) || 1;
+  document.getElementById('i-total').value = peso(p * q);
+}
+
+function saveItem() {
+  const product = document.getElementById('i-product').value.trim();
+  const brand = document.getElementById('i-brand').value.trim();
+  const category = document.getElementById('i-category').value;
+  const unitPrice = parseFloat(document.getElementById('i-price').value) || 0;
+  const quantity = parseFloat(document.getElementById('i-qty').value) || 1;
+  const size = document.getElementById('i-size').value.trim();
+  if (!product) { alert('Product name is required.'); return; }
+  db.items.push({ id: uid(), sessionId: currentSessionId, product, brand, category, unitPrice, lineTotal: unitPrice * quantity, quantity, size });
+  save(); closeModal('item-modal');
+  openModal('detail-modal'); renderDetailItems(); renderAll();
+  toast('Item added');
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  const idx = ['dashboard','history','products','estimate','scan'].indexOf(v);
+  if (idx >= 0) {
+    const topTabs = document.querySelectorAll('.nav-tab');
+    if (topTabs[idx]) topTabs[idx].classList.add('active');
+  }
+  const bnavTab = document.getElementById('bnav-' + v);
+  if (bnavTab) bnavTab.classList.add('active');
+  if (v === 'estimate') renderEstimate();
+  if (v === 'products') renderProducts();
+  if (v === 'history') renderHistory();
+  window.scrollTo(0, 0);
+}
+
+function renderAll() {
+  renderDashboard();
+  renderHistory();
+  renderProducts();
+}
+
+// click outside modal to close
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+
+// ─── BULK IMPORT ──────────────────────────────────────────────────────────────
+let scanResults = [];
+
+const CATEGORIES = ['Produce','Meat','Seafood','Dairy / Milk','Eggs','Beverages',
+  'Canned / Packaged Food','Sauces / Seasoning','Spices / Seasoning','Cooking',
+  'Baking','Snacks','Breakfast / Dairy','Baby / Nutrition','Household','Laundry',
+  'Personal Care','Kitchen / Household','Pasta / Dry Goods','Other'];
+
+const CAT_KEYWORDS = {
+  'Produce': ['veggie','vegetable','kangkong','sayote','cabbage','carrot','tomato','garlic','onion','eggplant','broccoli','calamansi','labuyo','gabi','sili','potato','camote','pechay'],
+  'Meat': ['chicken','pork','beef','hotdog','steak','longanisa','tocino','liempo','adobo','wings','thigh','breast','fillet','cubes','cut','meat'],
+  'Seafood': ['fish','bangus','tuna','tilapia','galunggong','shrimp','suahe','squid','crab','prawn','salmon','dilis','sardine'],
+  'Dairy / Milk': ['milk','evap','condensed','cream','cheese','yogurt','soy milk','vitasoy'],
+  'Eggs': ['egg','itlog'],
+  'Beverages': ['juice','soda','coke','sprite','water','absolute','coffee','tea','vinegar','drink','cola','royal'],
+  'Canned / Packaged Food': ['sardines','tuna can','corned','spam','luncheon','del monte','century'],
+  'Sauces / Seasoning': ['knorr','sinigang','oyster sauce','soy sauce','patis','vinegar','ketchup','banana','mama sita','ranch','maggi','toyo','worcestershire'],
+  'Spices / Seasoning': ['pepper','garlic powder','chili','paprika','cumin','oregano','bay leaf','salt','sugar','msg','ajinomoto'],
+  'Cooking': ['oil','palm oil','canola','lard','butter','margarine','crispy mix','batter'],
+  'Baking': ['flour','hotcake','maya','baking','yeast','sugar','vanilla'],
+  'Snacks': ['chips','crackers','biscuit','stik-o','pretzels','popcorn','chicharon','kinder','piccadelli','chisbites'],
+  'Breakfast / Dairy': ['milo','ovaltine','cereal','oatmeal','fiber wheat','granola','milk','bread','gardenia','cranberry'],
+  'Baby / Nutrition': ['gainplus','similac','enfamil','nido','promil','formula','baby'],
+  'Household': ['surf','detergent','bleach','cleaner','soap','dishwashing','zonrox'],
+  'Laundry': ['downy','fabric','softener','conditioner','ariel','tide','powder','liquid detergent'],
+  'Personal Care': ['shampoo','toothpaste','colgate','lotion','soap bar','deodorant','gatsby','sunscreen','all nite','feminine'],
+  'Kitchen / Household': ['container','tumbler','mug','bowl','pot','pan','opener','utensil','knife','spoon','fork'],
+  'Pasta / Dry Goods': ['rice','noodle','pasta','macaroni','spaghetti','vermicelli','miswa','pancit'],
+};
+
+function guessCategory(productName) {
+  const name = productName.toLowerCase();
+  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+    if (keywords.some(kw => name.includes(kw))) return cat;
+  }
+  return 'Other';
+}
+
+function parseLine(line) {
+  line = line.trim();
+  if (!line) return null;
+
+  // Split on dash separator
+  const parts = line.split(/\s*-\s*/);
+  if (parts.length < 2) return null;
+
+  const productName = parts[0].trim();
+  if (!productName) return null;
+
+  const price = parseFloat(parts[1]);
+  if (isNaN(price) || price <= 0) return null;
+
+  const quantity = parts.length >= 3 ? (parseFloat(parts[2]) || 1) : 1;
+  const size = parts.length >= 4 ? parts[3].trim() : '';
+
+  const titled = productName.replace(/\b\w/g, c => c.toUpperCase());
+
+  return {
+    _id: 'scan_' + uid(),
+    _removed: false,
+    product: titled,
+    brand: '',
+    category: guessCategory(titled),
+    unitPrice: price,
+    quantity: quantity,
+    size: size,
+    lineTotal: parseFloat((price * quantity).toFixed(2))
+  };
+}
+
+function parseBulkText() {
+  const text = document.getElementById('scan-paste-area').value.trim();
+  if (!text) { toast('Please paste some items first'); return; }
+  const lines = text.split('\n');
+  scanResults = lines.map(parseLine).filter(Boolean);
+  if (!scanResults.length) { toast('Could not parse any items — check the format'); return; }
+  renderScanReview();
+  document.getElementById('scan-step-upload').style.display = 'none';
+  document.getElementById('scan-step-review').style.display = '';
+  document.getElementById('scan-step-done').style.display = 'none';
+}
+
+function resetScan() {
+  scanResults = [];
+  ['scan-paste-area','scan-store'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const dateEl = document.getElementById('scan-date');
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0,10);
+  ['scan-step-review','scan-step-done'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const up = document.getElementById('scan-step-upload');
+  if (up) up.style.display = '';
+}
+
+function isNewProduct(productName) {
+  const name = productName.toLowerCase().trim();
+  return !db.items.some(i => i.product.toLowerCase().trim() === name);
+}
+
+function catOptionsHtml(selected) {
+  return CATEGORIES.map(c => `<option value="${c}"${c===selected?' selected':''}>${c}</option>`).join('');
+}
+
+function renderScanReview() {
+  const el = document.getElementById('scan-items-list');
+  const active = scanResults.filter(r => !r._removed);
+  if (!active.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-title">All items removed</div></div>';
+    return;
+  }
+  el.innerHTML = active.map(item => {
+    const isNew = isNewProduct(item.product);
+    return `<div class="scan-item-row ${isNew?'is-new':''}" id="srow-${item._id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${isNew?'<span class="badge badge-green">NEW</span>':'<span class="badge badge-gray">UPDATE</span>'}
+          <span style="font-weight:600;font-size:13px;">${item.product}</span>
+        </div>
+        <button class="scan-remove-btn" onclick="removeScanItem('${item._id}')">&#10005;</button>
+      </div>
+      <div class="scan-item-fields">
+        <input type="text" value="${item.product}" placeholder="Product name" style="grid-column:1/-1;"
+          onchange="updateScanItem('${item._id}','product',this.value)">
+        <input type="text" value="${item.brand||''}" placeholder="Brand (optional)"
+          onchange="updateScanItem('${item._id}','brand',this.value)">
+        <select onchange="updateScanItem('${item._id}','category',this.value)">${catOptionsHtml(item.category)}</select>
+        <input type="number" step="0.01" value="${item.unitPrice}" placeholder="Unit price ₱"
+          oninput="updateScanItemPrice('${item._id}','unitPrice',this.value)">
+        <input type="number" step="0.001" value="${item.quantity}" placeholder="Qty"
+          oninput="updateScanItemPrice('${item._id}','quantity',this.value)">
+        <input type="text" value="${item.size||''}" placeholder="Size (e.g. 500g)"
+          onchange="updateScanItem('${item._id}','size',this.value)">
+        <div style="padding:8px 10px;background:var(--green-light);border-radius:8px;font-weight:700;font-size:13px;color:var(--green-dark);display:flex;align-items:center;" id="stotal-${item._id}">
+          ${peso(item.lineTotal)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateScanItem(id, field, value) {
+  const item = scanResults.find(r => r._id === id);
+  if (!item) return;
+  item[field] = value;
+  if (field === 'product') {
+    // re-check NEW/UPDATE badge
+    const row = document.getElementById('srow-' + id);
+    if (row) row.className = 'scan-item-row' + (isNewProduct(value) ? ' is-new' : '');
+    const badge = row?.querySelector('.badge');
+    if (badge) { badge.className = isNewProduct(value) ? 'badge badge-green' : 'badge badge-gray'; badge.textContent = isNewProduct(value) ? 'NEW' : 'UPDATE'; }
+  }
+}
+
+function updateScanItemPrice(id, field, value) {
+  const item = scanResults.find(r => r._id === id);
+  if (!item) return;
+  item[field] = parseFloat(value) || 0;
+  item.lineTotal = parseFloat((item.unitPrice * item.quantity).toFixed(2));
+  const el = document.getElementById('stotal-' + id);
+  if (el) el.textContent = peso(item.lineTotal);
+}
+
+function removeScanItem(id) {
+  const item = scanResults.find(r => r._id === id);
+  if (item) item._removed = true;
+  renderScanReview();
+}
+
+function addBlankScanRow() {
+  scanResults.push({ _id: 'scan_' + uid(), _removed: false, product: '', brand: '', category: 'Other', unitPrice: 0, quantity: 1, size: '', lineTotal: 0 });
+  renderScanReview();
+  // Scroll to bottom
+  setTimeout(() => {
+    const rows = document.querySelectorAll('.scan-item-row');
+    if (rows.length) rows[rows.length-1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+function commitScanResults() {
+  const store = document.getElementById('scan-store').value.trim() || 'Unknown Store';
+  const date = document.getElementById('scan-date').value || new Date().toISOString().slice(0,10);
+  const active = scanResults.filter(r => !r._removed && r.product.trim());
+  if (!active.length) { toast('No items to save'); return; }
+
+  const sessionId = uid();
+  const receiptLabel = 'Receipt ' + (db.sessions.length + 1);
+  db.sessions.unshift({ id: sessionId, date, store, receipt: receiptLabel, manualTotal: null });
+
+  let newCount = 0, updateCount = 0;
+  active.forEach(item => {
+    if (isNewProduct(item.product)) newCount++; else updateCount++;
+    db.items.push({ id: uid(), sessionId, product: item.product.trim(), brand: item.brand||'', category: item.category, unitPrice: item.unitPrice, lineTotal: item.lineTotal, quantity: item.quantity, size: item.size||'' });
+  });
+
+  save(); renderAll();
+  document.getElementById('scan-done-title').textContent = 'Items saved!';
+  document.getElementById('scan-done-sub').textContent = active.length + ' items · ' + newCount + ' new product' + (newCount!==1?'s':'') + ' · ' + updateCount + ' price update' + (updateCount!==1?'s':'');
+  document.getElementById('scan-step-review').style.display = 'none';
+  document.getElementById('scan-step-done').style.display = '';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+load();
+initWeekOffset();
+renderAll();
+document.getElementById('scan-date').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
